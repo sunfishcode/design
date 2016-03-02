@@ -340,6 +340,10 @@ optionally one value on the stack across the exit of a block-like construct
 syntactic return value (this is a restriction in wasm itself, and may be
 loosened in the future with support for multiple return values).
 
+Another rule is that sequences of trees tied together with push/pop must be
+contiguous. Arbitrary blocks can be placed in the middle of trees, but their
+return value has to be consumed by some node in the tree.
+
 ## Some of the many bikesheds that will need painting:
 
  - Should /* */-style comments nest properly?
