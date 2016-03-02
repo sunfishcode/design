@@ -104,7 +104,7 @@ support more human-readable representations, but never at the cost of accurate r
 Proposed text syntax:
 
 ```
-  func $fac-opt ($a:i64) : (i64) {
+  function $fac-opt ($a:i64) : (i64) {
     var $x:i64
     $x = 1
     {
@@ -149,7 +149,7 @@ keywords.
 Corresponding proposed text syntax:
 
 ```
-  func $test_redundant_load () : (i32) {
+  function $test_redundant_load () : (i32) {
     i32.load [8,+0]
     f32.store [5,+0], -0.0
     i32.load [8,+0]
@@ -223,7 +223,7 @@ Corresponding LLVM wasm backend output + binaryen + slight tweaks:
 Corresponding proposed text syntax:
 
 ```
-   func $Q_rsqrt ($0:f32) : (f32) {
+   function $Q_rsqrt ($0:f32) : (f32) {
      var $1:f32
      $1 = f32.reinterpret/i32 (1597463007 - ((i32.reinterpret/f32 $0) >> 1))
      push $0 = $0 * 0.5
@@ -272,7 +272,7 @@ in a debugger.
 Corresponding proposed text syntax:
 
 ```
-  func $loop3 () : (i32) {
+  function $loop3 () : (i32) {
     var $i:i32
     $i = 0
     $cont : {
@@ -351,7 +351,6 @@ return value has to be consumed by some node in the tree.
    (C/JS-style, or should we fix
    [an old mistake](http://www.lysator.liu.se/c/dmr-on-or.html)?)
  - Significant newlines?
- - "func" vs "function" vs "routine"?
  - Remove the sigils from identifiers?
  - Add indices to push/pop, like `push0` and `pop0`, to help pair them up?
  - Invent a better syntax for load/store addresses?
