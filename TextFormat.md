@@ -105,7 +105,7 @@ Proposed text syntax:
 
 ```
   func $fac-opt ($a:i64) : (i64) {
-    local $x:i64
+    var $x:i64
     $x = 1
     {
       br_if $end
@@ -224,7 +224,7 @@ Corresponding proposed text syntax:
 
 ```
    func $Q_rsqrt ($0:f32) : (f32) {
-     local $1:f32
+     var $1:f32
      $1 = f32.reinterpret/i32 (1597463007 - ((i32.reinterpret/f32 $0) >> 1))
      push $0 = $0 * 0.5
      $1 = $1 * (1.5 - $1 * pop * $1)
@@ -273,7 +273,7 @@ Corresponding proposed text syntax:
 
 ```
   func $loop3 () : (i32) {
-    local $i:i32
+    var $i:i32
     $i = 0
     $cont : {
       $i = $i + 1
