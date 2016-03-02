@@ -18,7 +18,7 @@ The text format will be standardized, but only for tooling purposes:
 
 Given that the code representation is actually an
 [Abstract Syntax Tree](AstSemantics.md), the syntax contains nested
-statements and expressions (instead of the linear list of instructions most
+expressions (instead of the linear list of instructions most
 assembly languages have).
 
 The text format does not use JavaScript syntax; it is not intended to
