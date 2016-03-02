@@ -355,6 +355,7 @@ loosened in the future with support for multiple return values).
  - Represent backward `br`/`br_if` as "continue" and/or forward `br`/`br_if` as "break"?
  - Should a plain "continue" be a thing that automatically binds to the nearest loop?"
  - Pick a more concise syntax for conversion operators, like `f32.reinterpret/i32`?
+ - Use `&-` for load/store alignment instead of `/`?
 
 
 # Debug symbol integration
