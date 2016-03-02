@@ -79,6 +79,10 @@ support more human-readable representations, but never at the cost of accurate r
  - Don't worry too much about parsing speed or minifiability; that's what the
    binary format is for.
 
+ - Use a common syntax for block bodies, loop bodies, if arms, and function
+   bodies. This helps avoid confusion about how "loop doesn't loop", and helps
+   emphasize how all these constructs share behavior in wasm.
+
 
 ## Examples:
 
