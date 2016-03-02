@@ -5,16 +5,15 @@ The purpose of this text format is to support:
   source can be viewed) in a natural way.
 * Presentation in browser development tools when source maps aren't present
   (which is necessarily the case with [the Minimum Viable Product (MVP)](MVP.md)).
-* Writing WebAssembly code directly for reasons including pedagogical,
-  experimental, debugging, optimization, and testing of the spec itself.
+* Working with WebAssembly code directly for reasons including pedagogical,
+  experimental, debugging, profiling, optimization, and testing of the spec
+  itself.
 
 The text format is equivalent and isomorphic to the [binary format](BinaryEncoding.md).
 
-The text format will be standardized, but only for tooling purposes:
-* Compilers will support this format for `.S` and inline assembly.
-* Debuggers and profilers will present binary code using this textual format.
-* Browsers will not parse the textual format on regular web content in order to
-  implement WebAssembly semantics.
+The text format will be standardized, but only for tooling purposes; browsers
+will not parse the textual format on regular web content in order to implement
+WebAssembly semantics.
 
 Given that the code representation is actually an
 [Abstract Syntax Tree](AstSemantics.md), the syntax contains nested
