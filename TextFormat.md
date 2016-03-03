@@ -372,3 +372,7 @@ therefore synthesize new names. However, as part of the [tooling](Tooling.md)
 story, a lightweight, optional "debug symbol" global section may be defined
 which associates names with each indexed entity and, when present, these names
 will be used in the text format projected from a binary WebAssembly module.
+
+# Contributor Guide
+
+ - If you make a change to the text format syntax in this document, make sure to update the [BNF Grammar](https://github.com/mbebenita/wast) as well, or at least file an [issue](https://github.com/mbebenita/wast/issues/new) to have it updated.
