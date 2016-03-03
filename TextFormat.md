@@ -363,6 +363,74 @@ return value has to be consumed by some node in the tree.
  - Pick a more concise syntax for conversion operators, like `f32.reinterpret/i32`?
  - Use `&-` for load/store alignment instead of `/`?
 
+## Operator Precedence (JS style, early draft)
+
+| Precedence    | Operator                                       | Associativity | Associativity               |
+| ------------- |:---------------------------------------------- | -------------:| ---------------------------:|
+| 19            | Block                                          | left-to-right | ( … )                       |
+| 17            | Function Call                                  | left-to-right | … ( … )                     |
+| 15            | Logical NOT                                    | right-to-left | ! …                         |
+| 15            | Bitwise NOT                                    | right-to-left | ~ …                         |
+| 15            | Unary Plus                                     | right-to-left | + …                         |
+| 15            | Unary Negation                                 | right-to-left | - …                         |
+| 15            | Prefix Increment                               | right-to-left | ++ …                        |
+| 15            | Prefix Decrement                               | right-to-left | -- …                        |
+| 15            |                                                | right-to-left | type.clz …                  |
+| 15            |                                                | right-to-left | type.ctz …                  |
+| 15            |                                                | right-to-left | type.popcnt …               |
+| 15            |                                                | right-to-left | type.abs …                  |
+| 15            |                                                | right-to-left | type.ceil …                 |
+| 15            |                                                | right-to-left | type.floor …                |
+| 15            |                                                | right-to-left | type.trunc …                |
+| 15            |                                                | right-to-left | type.nearest …              |
+| 15            |                                                | right-to-left | type.sqrt …                 |
+| 15            |                                                | right-to-left | type.extend_s/i32 …         |
+| 15            |                                                | right-to-left | type.extend_u/i32 …         |
+| 15            |                                                | right-to-left | type.wrap/i64 …             |
+| 15            |                                                | right-to-left | type.trunc_s/f32 …          |
+| 15            |                                                | right-to-left | type.trunc_u/f32 …          |
+| 15            |                                                | right-to-left | type.trunc_s/f64 …          |
+| 15            |                                                | right-to-left | type.trunc_u/f64 …          |
+| 15            |                                                | right-to-left | type.reinterpret/f32 …      |
+| 15            |                                                | right-to-left | type.reinterpret/f64 …      |
+| 15            |                                                | right-to-left | type.convert_u/i32 …        |
+| 15            |                                                | right-to-left | type.convert_s/i32 …        |
+| 15            |                                                | right-to-left | type.convert_u/i64 …        |
+| 15            |                                                | right-to-left | type.convert_s/i64 …        |
+| 15            |                                                | right-to-left | type.promote/f32 …          |
+| 15            |                                                | right-to-left | type.demote/f64 …           |
+| 15            |                                                | right-to-left | type.reinterpret/i32 …      |
+| 15            |                                                | right-to-left | type.reinterpret/i64 …      |
+| 14            | Multiplication                                 | left-to-right | … * …                       |
+| 14            | Division                                       | left-to-right | … / …                       |
+| 14            | Signed Division                                | left-to-right | … /s …                      |
+| 14            | Unsigned Division                              | left-to-right | … /u …                      |
+| 14            | Signed Remainder                               | left-to-right | … %s …                      |
+| 14            | Unsigned Remainder                             | left-to-right | … %u …                      |
+| 13            | Addition                                       | left-to-right | … + …                       |
+| 13            | Subtraction                                    | left-to-right | … - …                       |
+| 12            | Bitwise Left Shift                             | left-to-right | … << …                      |
+| 12            | Bitwise Right Shift                            | left-to-right | … >> …                      |
+| 12            | Bitwise Unsigned Right Shift                   | left-to-right | … >>> …                     |
+| 11            | Less Than                                      | left-to-right | … < …                       |
+| 11            | Signed Less Than                               | left-to-right | … <s …                      |
+| 11            | Unsigned Less Than                             | left-to-right | … <u …                      |
+| 11            | Less Than Or Equal                             | left-to-right | … <= …                      |
+| 11            | Signed Less Than Or Equal                      | left-to-right | … <=s …                     |
+| 11            | Unsigned Less Than Or Equal                    | left-to-right | … <=u …                     |
+| 11            | Greater Than                                   | left-to-right | … > …                       |
+| 11            | Signed Greater Than                            | left-to-right | … >s …                      |
+| 11            | Unsigned Greater Than                          | left-to-right | … >u …                      |
+| 11            | Greater Than Or Equal                          | left-to-right | … >= …                      |
+| 11            | Signed Greater Than Or Equal                   | left-to-right | … >=s …                     |
+| 11            | Unsigned Greater Than Or Equal                 | left-to-right | … >=u …                     |
+| 9             | Bitwise AND                                    | left-to-right | … & …                       |
+| 8             | Bitwise XOR                                    | left-to-right | … ^ …                       |
+| 7             | Bitwise OR                                     | left-to-right | … | …                       |
+| 6             | Logical AND                                    | left-to-right | … && …                      |
+| 5             | Logical OR                                     | left-to-right | … || …                      |
+| 4             | Select                                         | right-to-left | type.select …, …, …         |
+| 3             | Assignment                                     | right-to-left | … = …                       |
 
 # Debug symbol integration
 
