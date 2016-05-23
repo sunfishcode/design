@@ -537,6 +537,16 @@ A: We don't want people arguing over which way is better. If we don't forbid
    subjectively chosen to forbid semicolons for now.
 
 
+Q: How about replacing push/pop with something more flexible?
+
+A: Push/pop as described here are meant to be a direct reflection of WebAssembly
+   itself. For example, it would be convenient to replace `push` with
+   something that would allow a value to be used multiple times. However,
+   push/pop are representing expression tree edges in WebAssembly, which
+   can only have a single definition and a single use. The way to use a value
+   multiple times in WebAssembly is to use `set_local` and `get_local`.
+
+
 # Debug symbol integration
 
 The binary format inherently strips names from functions, locals, globals, etc,
