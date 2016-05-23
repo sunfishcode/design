@@ -35,13 +35,26 @@ represented as hexadecimal floating-point as specified by the C99 standard, whic
 IEEE-754-2008 section 5.12.3 also specifies. The textual format may be improved to also
 support more human-readable representations, but never at the cost of accurate representation.
 
-# Official Text Format
+# ~~Official~~*Experimental* Text Format
 
-## Warning: this is an experiment.
+## This is an experiment!
 
-This document has not been submitted to any official WebAssembly forum.
-It is not known at this time whether it ever will be, and if it is, it
-may be with significant changes.
+This document is a sketch of a possible Text Format proposal for WebAssembly to
+use for the "View Source" functionality in browsers. WebAssembly looks enough
+like a programming language that it tends to activate our programmer intuitions
+about syntax, but it differs from normal programming languages in numerous
+respects, so we don't fully trust our intuitions.
+
+So, we're sketching something up, and building a trial implementation of it in
+Firefox, so that we can try it out on real code in a real browser setting, to
+see if it actually "works" in practice. Maybe we'll like it and propose it to
+the official WebAssembly project. Maybe it'll need changes. Or maybe it'll
+totally flop and we'll drop it and pursue something completely different!
+
+Comments, questions, suggestions, and reactions are welcome on
+[this repo's issue tracker](https://github.com/sunfishcode/design/issues) for
+the moment. As the experiment progresses, we may shift to other discussion
+forums, but for now we're keeping it simple.
 
 
 ## Philosophy:
