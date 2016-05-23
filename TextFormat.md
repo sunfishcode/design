@@ -325,13 +325,25 @@ avoid very deep nesting in many cases.
 
 ## Push and pop
 
-Normally, the preferred way to split up a large expression tree would be to
-simply assign some subtrees to their own local variables. Of course compilers
-can optimize them away as needed.
+Note: Push/pop is a particularly experimental piece of this proposal. The
+proposal works without it, and the initial Firefox implementation does not
+include it. It makes some kinds of code more readable, and provides a
+consistent way to support a spectrum of views on WebAssembly ranging from
+one-instruction-per-line to maximum nesting, however it is unfamiliar many
+people, and it does come with some non-obvious limitations, so its overall
+value is unclear.
 
-However, in wasm, introducing locals like that increases code size, so
+That said, here's the idea, for what it's worth:
+
+In a normal programming language, the preferred way to split up a large
+expression tree would be to simply assign some subtrees to their own local
+variables. Of course compilers can optimize them away as needed, so there's
+no reason not to do this.
+
+However in wasm, introducing locals increases code size, so
 compilers producing wasm aren't going to do that. There will be a lot of code
-in the wild with very large monolithic trees. Binary->text translation can't
+in the wild with very large monolithic trees, because compilers will be writing
+code that way to minimize code size. And, binary->text translation can't
 introduce local variables, because that would make binary->text->binary lossy.
 
 The solution proposed here: `push` and `pop`. `push` pushes subtrees onto a
