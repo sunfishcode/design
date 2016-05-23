@@ -1,6 +1,7 @@
 # Text Format
 
 The purpose of this text format is to support:
+
 * View Source on a WebAssembly module, thus fitting into the Web (where every
   source can be viewed) in a natural way.
 * Presentation in browser development tools when source maps aren't present
@@ -42,11 +43,10 @@ support more human-readable representations, but never at the cost of accurate r
  - Use JS-style sensibilities when there aren't reasons otherwise.
  - It's a compiler target, not a programming language, but readability still counts.
 
-
 ## High-level summary:
 
  - Curly braces for function bodies, blocks, etc., `/* */`-style and `//`-style
-   comments, and whitespace is not significant. Also, no semicolons.
+   comments, and whitespace is not significant.
    (TODO: Should `/* */`-style comments nest properly?)
 
  - `get_local` looks like a simple reference; `set_local` looks like an
@@ -55,40 +55,58 @@ support more human-readable representations, but never at the cost of accurate r
 
  - Infix syntax for arithmetic, with simple overloading. Explicit grouping via
    parentheses. Concise and familiar with JS and others. (TODO: Use C/JS-style
-   operator precedence, or fix
+   operator precedence, or fix 
    [an old mistake](http://www.lysator.liu.se/c/dmr-on-or.html)?)
 
- - Prefix syntax with comma-separated operands for all other operators. For less
-   frequent opcodes, prefer just presenting operator names, so that they're easy
-   to identify.
+ - Prefix syntax with operands in parentheses for most other operators (e.g. 
+   `i32.rotl($0, 8)`). For less frequent opcodes, prefer just presenting operator
+   names, so that they're easy to identify.
 
  - Typescript-style `name : type` declarations.
 
- - Parentheses around call arguments, eg. `call $functionname(arg, arg, arg)`,
-   and `if` conditions, eg. `if ($condition) { call $then() } else { call $else() }`,
+ - Parentheses around call arguments, eg. `$functionname(arg, arg, arg)`,
+   and `if` conditions, eg. `if ($condition) { $then() } else { $else() }`,
    because they're familiar to many people and not too intrusive.
 
  - Allow highly complex trees to be syntactically split up into readable parts.
 
  - Put labels "where they go".
 
+ - The text format will be compatible with the [LES](http://loyc.net/les) text 
+   format. It _is not_ compatible with the current LES specification, but LES
+   is in beta and can still be tweaked to wasm's needs. Based on the wasm text 
+   format, a third version of LES (LESv3) will be drafted before the end of 2016.
+   Meanwhile, the wasm text format will be syntactically constrained in such a 
+   way that it will be an appropriate basis for LESv3. For the MVP, parsers of 
+   the wasm text format will be able to choose whether to use a custom parser 
+   dedicated to wasm or a generic LES parser.
+
+ - TODO: should semicolons should be required at the end of each expression 
+   in a block? If newlines are the primary separator, then LES will cease to 
+   be a superset of JSON (since JSON ignores newlines), but there are benefits
+   on the flip side (such as eliminating the need for semicolons!). In this 
+   document it is assumed that a newline **does** mark the end of an 
+   expression if the newline does not appear directly inside parentheses (as 
+   inside parentheses, expressions are always terminated by commas or by a 
+   closing parenthesis). In any case it would be useful to _allow_ semicolons,
+   so that one can write multiple expressions on a single line.
 
 ## Examples:
 
 ### Basics
 
 ```
-  function $fac-opt ($a:i64) : (i64) {
-    var $x:i64
+  function $@fac-opt($a:i64) : i64 {
+    $x:i64
     $x = 1
     {
-      br_if $end ? $a <s 2
+      br_if end ? $a < 2
       loop $loop {
         $x = $x * $a
         $a = $a + -1
-        br_if $loop ? $a >s 1
+        br_if $loop ? $a > 1
       }
-      $end:
+      :end
     }
     $x
   }
@@ -96,8 +114,14 @@ support more human-readable representations, but never at the cost of accurate r
 
 (hand-translated from [fac.wast](https://github.com/WebAssembly/spec/blob/master/ml-proto/test/fac.wast))
 
-The function return type has parentheses for symmetry with the parameter types,
-anticipating adding multiple return values to wasm in the future.
+The `$` sigil on function and variable names cleanly ensures that they never 
+collide with wasm keywords, present or future. The `@` sign on `fac-opt` allows 
+certain special characters to appear in identifiers, such as `-` which would 
+otherwise be treated as a subtraction operator.
+
+The function return type can have parentheses (`: (i64)`) for symmetry with the 
+parameter types, since we anticipate adding multiple return values to wasm in the
+future, but they are not required.
 
 The curly braces around the function body are not a `block` node; they are part
 of the function syntax, reflecting how function bodies in wasm are block-like.
@@ -105,21 +129,18 @@ of the function syntax, reflecting how function bodies in wasm are block-like.
 The last expression of the function body here acts as its return value. This
 works in all block-like constructs (`block`, function body, `if`, etc.)
 
-`>s` means *signed* greater-than. explicit unsigned or signed operators will be
-suffixed with 'u' or 's', respectively.
-
-The `$` sigil on user names cleanly ensures that they never collide with wasm
-keywords, present or future.
+`>` means *signed* greater-than. Unsigned operators will have a `|` before the final operator character, so `|>` is *unsigned* greater-than.
 
 `br_if` uses a question mark to announce the condition operand. `select` does
-also. (TODO: Is this too cute?)
+also. (TODO: Is this too cute? Also, should the order be reversed as in 
+`br_if $a < 2 ? end`?)
 
 ### Linear memory addresses
 
 ```
-  function $test_redundant_load () : (i32) {
+  function $test_redundant_load() : (i32) {
     i32.load [8,+0]
-    f32.store [5,+0], -0x0p0
+    f32.store [5,+0] = -0x0p0
     i32.load [8,+0]
   }
 ```
@@ -128,7 +149,8 @@ also. (TODO: Is this too cute?)
 
 Addresses are printed as `[base,+offset]`. It could be shortened to `[base]` when
 there is no offset; I made the offset explicit above just to illustrate the syntax.
-There can also be an optional `:align=…` for non-natural alignments.
+There can also be an optional `align …` for non-natural alignments, e.g. 
+`i32.load [8,+0, align 2]`.
 
 ### A slightly larger example:
 
@@ -194,11 +216,11 @@ Here's the corresponding LLVM wasm backend output + binaryen + slight tweaks:
 And here's the proposed text syntax:
 
 ```
-   function $Q_rsqrt ($0:f32) : (f32) {
-     var $1:f32
-     $1 = f32.reinterpret/i32 (1597463007 - ((i32.reinterpret/f32 $0) >> 1))
-     push:0 $0 = $0 * 0x1p-1
-     $1 = $1 * (0x1.8p0 - $1 * pop:0 * $1)
+   function $Q_rsqrt($0:f32) : (f32) {
+     $1:f32
+     $1 = f32.reinterpret'i32 (1597463007 - ((i32.reinterpret'f32 $0) >> 1))
+     push #0 = ($0 = $0 * 0x1p-1);
+     $1 = $1 * (0x1.8p0 - $1 * #0 * $1)
      $1 * (0x1.8p0 - $1 * $0 * $1)
    }
 ```
@@ -207,18 +229,16 @@ This shows off the compactness of infix operators with overloading. In the
 s-expression syntax, these expressions are quite awkward to read, and this
 isn't even a very big example. But the text syntax here is very short.
 
-This also introduces the push and pop mechanism for splitting up expression
-trees. Push and pop connect subtrees to their parents, allowing them to be
-written separately in the text syntax, but still be part of the same
-conceptual tree in the wasm semantics, and in the wasm binary format.
+This also introduces the `push` mechanism for splitting up expression
+trees. `push`, and the implicit pop `#0`, connect subtrees to their parents,
+allowing them to be written separately in the text syntax, but still be part
+of the same conceptual tree in the wasm semantics, and in the wasm binary format.
 
 In particular, note that the s-expression version has a `set_local` buried in
 the middle of a tree, making it easy for a human to miss. Humans wouldn't write
 code that way, but in wasm, compilers are *incentivised* to write it that way,
-because it reduces code size. It's going to happen a lot, and the push/pop
+because it reduces code size. It's going to happen a lot, and the `expr`
 mechanism gives us a way to make this more readable in many cases.
-
-See [below](#pushpop) for more information.
 
 ### Labels
 
@@ -242,14 +262,14 @@ Corresponding proposed text syntax:
 
 ```
   function $loop3 () : (i32) {
-    var $i:i32
+    $i:i32
     $i = 0
     loop $cont {
       $i = $i + 1
       if ($i == 5) {
-        br $exit, $i
+        br exit => $i
       }
-    $exit:
+      :exit
     }
   }
 ```
@@ -258,24 +278,28 @@ Note that the curly braces are part of the `if`, rather than introducing a
 block. This reflects how `if` essentially provides `block`-like capabilities
 in the wasm binary format.
 
+Due to syntactic requirements of LES, the colon `:` appears before the label 
+name (`:exit`) rather than afterward.
+
 ### Nested blocks
 
-Label definitions, like the `$exit:` above, introduce additional blocks nested
-within the nearest `{`, without requiring their own `{`. This allows the deep
-nesting of `br_table` to be printed in a relatively flat manner:
+Label definitions that do not appear at the end of the enclosing block, such as
+the `:exit` above, introduce additional blocks nested within the nearest `{`, 
+without requiring their own `{`. This allows the deep nesting of `br_table` to 
+be printed in a relatively flat manner:
 
 ```
   {
-    br_table [$red, $orange, $yellow, $green], $default, $index
-    $red:
+    br_table [red, orange, yellow, green, default] : $index
+    :red
       // ...
-    $orange:
+    :orange
       // ...
-    $yellow:
+    :yellow
       // ...
-    $green:
+    :green
       // ...
-    $default:
+    :default
       // ...
   }
 ```
@@ -283,7 +307,6 @@ nesting of `br_table` to be printed in a relatively flat manner:
 representing the following in nested form:
 
 ```
-
   (block $default
     (block $green
       (block $yellow
@@ -304,8 +327,7 @@ representing the following in nested form:
 `br_table`s can have large numbers of labels, so this feature allows us to
 avoid very deep nesting in many cases.
 
-
-## Push and pop
+## Pushing and popping
 
 Normally, the preferred way to split up a large expression tree would be to
 simply assign some subtrees to their own local variables. Of course compilers
@@ -350,9 +372,9 @@ surprising at first, but it makes sense when you look at wasm's evaluation order
 For example:
 
 ```
-   push:0 call $foo()
-   push:1 call $bar()
-   call $qux(pop:0, pop:1)
+   push #0 = $foo()
+   push #1 = $bar()
+   $qux(#0, #1)
 ```
 
 Clearly, this syntax should evaluate the call to `$foo` before the call to
@@ -361,7 +383,7 @@ the order they appear. Both of these principles are completely intuitive. Put
 together as they are here, they imply that the first pop corresponds to the
 first push, which effectively means that the pops happen right-to-left.
 
-The `:0` and `:1` are stack-depth indicators, which can be useful in pairing
+The `#0` and `#1` are stack-depth indicators, which can be useful in pairing
 up pushes with their corresponding pops.
 
 Some additional rules governing push and pop are:
@@ -379,22 +401,21 @@ changes to wasm, these rules would change accordingly.
 ## Operators with special syntax
 
 As mentioned earlier, basic arithmetic operators use an infix notation, some
-operators require explicit parentheses, and some operators use `?` to introduce
-boolean conditions. The following is a table of special syntax:
-
+operators require explicit parentheses, and some operators with boolean 
+conditions use `?`. The following is a table of special syntax:
 
 ## Control flow operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md))
 
-| Name | Syntax | Examples
-| ---- | ---- | ---- |
-| `block` | *label*: | `{ br $a a: }`
-| `loop` | `loop` *label* `{` … `}` | `loop $a { br $a }`
-| `if` | `if` (*expr*) `{` *expr** `}` | `if (0) { 1 }`
-| `if_else` | `if` (*expr*) `{` *expr** `} else {` *expr**`}` | `if (0) { 1 } else { 2 }`
-| `select` | `select` *expr*, *expr* ? *expr* | `select 1, 2 ? $x < $y`
-| `br` | `br` *label* | `br $a`
-| `br_if` | `br` *label* `?` *expr* | `br $a`, `br $a ? $x < $y`
-| `br_table` | `br_table [` *case-label* `,` … `] ,` *default-label* `,` *expr* | `br_table [$x, $y], $z, 0`
+| Name       | Syntax                   | Examples 
+| ---------- | ------------------------ | -------- 
+| `block`    | :*label*                 | `{ br a; :a }`
+| `loop`     | `loop` *label* `{` … `}` | `loop a { br a }`
+| `if`       | `if (`*expr*`)` `{` *expr** `}` | `if ($x) { $f($x) }`
+| `if_else`  | `if (`*expr*`)` `{` *expr** `} else {` *expr** `}` | `if (0) { 1 } else { 2 }`
+| `select`   | `select` *expr* `:` *expr* `?` *expr*`)` | `select 1 : 2 ? $x < $y`
+| `br`       | `br` *label*               | `br a`
+| `br_if`    | `br_if` *label* `?` *expr* | `br_if a ? $x < $y`
+| `br_table` | `br_table {` *case-label* `,` … `,` *default-label*] `} from` *expr* | `br_table [a, b, c] : $x`
 
 (TODO: as above, are the `?`s too cute?)
 
@@ -431,50 +452,50 @@ The other forms of `load` and `store` are similar.
 | `i32.add` | … `+` …
 | `i32.sub` | … `-` …
 | `i32.mul` | … `*` …
-| `i32.div_s` | … `/s` …
-| `i32.div_u` | … `/u` …
-| `i32.rem_s` | … `%s` …
-| `i32.rem_u` | … `%u` …
+| `i32.div_s` | … `/` …
+| `i32.div_u` | … `|/` …
+| `i32.rem_s` | … `%` …
+| `i32.rem_u` | … `|%` …
 | `i32.and` | … `&` …
 | `i32.or` | … `|` …
 | `i32.xor` | … `^` …
 | `i32.shl` | … `<<` …
-| `i32.shr_u` | … `>>u` …
-| `i32.shr_s` | … `>>s` …
+| `i32.shr_s` | … `>>` …
+| `i32.shr_u` | … `>|>` …
 | `i32.eq` | … `==` …
 | `i32.ne` | … `!=` …
-| `i32.lt_s` | … `<s` …
-| `i32.le_s` | … `<=s` …
-| `i32.lt_u` | … `<u` …
-| `i32.le_u` | … `<=u` …
-| `i32.gt_s` | … `>s` …
-| `i32.ge_s` | … `>=s` …
-| `i32.gt_u` | … `>u` …
-| `i32.ge_u` | … `>=u` …
+| `i32.lt_s` | … `<` …
+| `i32.le_s` | … `<=` …
+| `i32.lt_u` | … `|<` …
+| `i32.le_u` | … `<|=` …
+| `i32.gt_s` | … `>` …
+| `i32.ge_s` | … `>=` …
+| `i32.gt_u` | … `|>` …
+| `i32.ge_u` | … `>|=` …
 | `i32.eqz` | `!` …
 | `i64.add` | … `+` …
 | `i64.sub` | … `-` …
 | `i64.mul` | … `*` …
-| `i64.div_s` | … `/s` …
-| `i64.div_u` | … `/u` …
-| `i64.rem_s` | … `%s` …
-| `i64.rem_u` | … `%u` …
+| `i64.div_s` | … `/` …
+| `i64.div_u` | … `|/` …
+| `i64.rem_s` | … `%` …
+| `i64.rem_u` | … `|%` …
 | `i64.and` | … `&` …
 | `i64.or` | … `\|` …
 | `i64.xor` | … `^` …
 | `i64.shl` | … `<<` …
-| `i64.shr_u` | … `>>u` …
-| `i64.shr_s` | … `>>s` …
+| `i64.shr_s` | … `>>` …
+| `i64.shr_u` | … `>|>` …
 | `i64.eq` | … `==` …
 | `i64.ne` | … `!=` …
-| `i64.lt_s` | … `<s` …
-| `i64.le_s` | … `<=s` …
-| `i64.lt_u` | … `<u` …
-| `i64.le_u` | … `<=u` …
-| `i64.gt_s` | … `>s` …
-| `i64.ge_s` | … `>=s` …
-| `i64.gt_u` | … `>u` …
-| `i64.ge_u` | … `>=u` …
+| `i64.lt_s` | … `<` …
+| `i64.le_s` | … `<=` …
+| `i64.lt_u` | … `|<` …
+| `i64.le_u` | … `<|=`  …
+| `i64.gt_s` | … `>` …
+| `i64.ge_s` | … `>=` …
+| `i64.gt_u` | … `|>` …
+| `i64.ge_u` | … `>|=` …
 | `i64.eqz` | `!` …
 | `f32.add` | … `+` …
 | `f32.sub` | … `-` …
@@ -504,6 +525,7 @@ All other operators use their actual name in a prefix notation, such as
 
 ## Answers to anticipated questions
 
+
 Q: JS avoids sigils, and uses context-sensitive keywords to avoid trouble.
    Can wasm do this?
 
@@ -523,13 +545,6 @@ A: The `br_table` construct has multiple labels, and there may be a mix of
    to special-case them.
 
 
-Q: Why not permit optional semicolons?
-
-A: We don't want people arguing over which way is better. If we don't forbid
-   semicolons, the next best option would be to require semicolons. I've
-   subjectively chosen to forbid semicolons for now.
-
-
 # Debug symbol integration
 
 The binary format inherently strips names from functions, locals, globals, etc,
@@ -538,3 +553,8 @@ therefore synthesize new names. However, as part of the [tooling](Tooling.md)
 story, a lightweight, optional "debug symbol" global section may be defined
 which associates names with each indexed entity and, when present, these names
 will be used in the text format projected from a binary WebAssembly module.
+
+Since LES allows "attribute" expressions to be attached to any expression, 
+these could be used someday to represent additional debug information, 
+comments, or other "side-channel" information that may be stored in the 
+binary format in the future.
