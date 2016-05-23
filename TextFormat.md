@@ -46,7 +46,7 @@ about syntax, but it differs from normal programming languages in numerous
 respects, so we don't fully trust our intuitions.
 
 So, we're sketching something up, and building a trial implementation of it in
-Firefox, so that we can try it out on real code in a real browser setting, to
+Firefox. This way, we can try it out on real code in a real browser setting, and
 see if it actually "works" in practice. Maybe we'll like it and propose it to
 the official WebAssembly project. Maybe it'll need changes. Or maybe it'll
 totally flop and we'll drop it and pursue something completely different!
