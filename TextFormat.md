@@ -36,7 +36,27 @@ represented as hexadecimal floating-point as specified by the C99 standard, whic
 IEEE-754-2008 section 5.12.3 also specifies. The textual format may be improved to also
 support more human-readable representations, but never at the cost of accurate representation.
 
-# Official Text Format
+# ~~Official~~*Experimental* Text Format
+
+## This is an experiment!
+
+This document is a sketch of a possible Text Format proposal for WebAssembly to
+use for the "View Source" functionality in browsers. WebAssembly looks enough
+like a programming language that it tends to activate our programmer intuitions
+about syntax, but it differs from normal programming languages in numerous
+respects, so we don't fully trust our intuitions.
+
+So, we're sketching something up, and building a trial implementation of it in
+Firefox. This way, we can try it out on real code in a real browser setting, and
+see if it actually "works" in practice. Maybe we'll like it and propose it to
+the official WebAssembly project. Maybe it'll need changes. Or maybe it'll
+totally flop and we'll drop it and pursue something completely different!
+
+Comments, questions, suggestions, and reactions are welcome on
+[this repo's issue tracker](https://github.com/sunfishcode/design/issues) for
+the moment. As the experiment progresses, we may shift to other discussion
+forums, but for now we're keeping it simple.
+
 
 ## Philosophy:
 
@@ -99,15 +119,13 @@ support more human-readable representations, but never at the cost of accurate r
   function $@fac-opt($a:i64) : i64 {
     $x:i64
     $x = 1
-    {
-      br_if end ? $a < 2
-      loop $loop {
-        $x = $x * $a
-        $a = $a + -1
-        br_if $loop ? $a > 1
-      }
-      :end
+    br_if end ? $a < 2
+    loop $loop {
+      $x = $x * $a
+      $a = $a + -1
+      br_if loop ? $a > 1
     }
+    :end
     $x
   }
 ```
@@ -129,7 +147,7 @@ of the function syntax, reflecting how function bodies in wasm are block-like.
 The last expression of the function body here acts as its return value. This
 works in all block-like constructs (`block`, function body, `if`, etc.)
 
-`>` means *signed* greater-than. Unsigned operators will have a `|` before the final operator character, so `|>` is *unsigned* greater-than.
+`>` means *signed* greater-than. Unsigned operators will have a `|` before the last character of the operator, so `|>` is *unsigned* greater-than.
 
 `br_if` uses a question mark to announce the condition operand. `select` does
 also. (TODO: Is this too cute? Also, should the order be reversed as in 
@@ -544,6 +562,25 @@ A: The `br_table` construct has multiple labels, and there may be a mix of
    what we have in the spec, so using their actual names avoids needing
    to special-case them.
 
+Q: How about replacing push/pop with something more flexible?
+
+A: Push/pop as described here are meant to be a direct reflection of WebAssembly
+   itself. For example, it would be convenient to replace `push` with
+   something that would allow a value to be used multiple times. However,
+   push/pop are representing expression tree edges in WebAssembly, which
+   can only have a single definition and a single use. The way to use a value
+   multiple times in WebAssembly is to use `set_local` and `get_local`.
+
+Q: Why is, for example, the unsigned shift operator called `>|>` rather than 
+   the more logical `|>>`, or even `|>>|`?
+
+A: None of the "unsigned" operators are built into LES. The precedence of 
+   non-built-in operators is derived in a predictable way from the built-in
+   operators, so that for example `>|>` has the same precedence as `>>`,
+   whereas `|>>` has the same precedence as `>`, and `|>>|` has the same 
+   precedence as `||`. Placing the vertical bar in the middle allows the 
+   operator to keep the same precedence as the built-in operator.
+   
 
 # Debug symbol integration
 
