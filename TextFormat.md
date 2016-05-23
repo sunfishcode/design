@@ -37,6 +37,13 @@ support more human-readable representations, but never at the cost of accurate r
 
 # Official Text Format
 
+## Warning: this is an experiment.
+
+This document has not been submitted to any official WebAssembly forum.
+It is not known at this time whether it ever will be, and if it is, it
+may be with significant changes.
+
+
 ## Philosophy:
 
  - Use JS-style sensibilities when there aren't reasons otherwise.
