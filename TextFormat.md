@@ -88,15 +88,13 @@ may be with significant changes.
   function $fac-opt ($a:i64) : (i64) {
     var $x:i64
     $x = 1
-    {
-      br_if $end ? $a <s 2
-      loop $loop {
-        $x = $x * $a
-        $a = $a + -1
-        br_if $loop ? $a >s 1
-      }
-      $end:
+    br_if $end ? $a <s 2
+    loop $loop {
+      $x = $x * $a
+      $a = $a + -1
+      br_if $loop ? $a >s 1
     }
+  $end:
     $x
   }
 ```
@@ -274,15 +272,15 @@ nesting of `br_table` to be printed in a relatively flat manner:
 ```
   {
     br_table [$red, $orange, $yellow, $green], $default, $index
-    $red:
+  $red:
       // ...
-    $orange:
+  $orange:
       // ...
-    $yellow:
+  $yellow:
       // ...
-    $green:
+  $green:
       // ...
-    $default:
+  $default:
       // ...
   }
 ```
