@@ -237,8 +237,7 @@ And here's the proposed text syntax:
    function $Q_rsqrt($0:f32) : (f32) {
      $1:f32
      $1 = f32.reinterpret'i32 (1597463007 - ((i32.reinterpret'f32 $0) >> 1))
-     push #0 = ($0 = $0 * 0x1p-1);
-     $1 = $1 * (0x1.8p0 - $1 * #0 * $1)
+     $1 = $1 * (0x1.8p0 - $1 * ($0 = $0 * 0x1p-1) * $1)
      $1 * (0x1.8p0 - $1 * $0 * $1)
    }
 ```
@@ -246,17 +245,6 @@ And here's the proposed text syntax:
 This shows off the compactness of infix operators with overloading. In the
 s-expression syntax, these expressions are quite awkward to read, and this
 isn't even a very big example. But the text syntax here is very short.
-
-This also introduces the `push` mechanism for splitting up expression
-trees. `push`, and the implicit pop `#0`, connect subtrees to their parents,
-allowing them to be written separately in the text syntax, but still be part
-of the same conceptual tree in the wasm semantics, and in the wasm binary format.
-
-In particular, note that the s-expression version has a `set_local` buried in
-the middle of a tree, making it easy for a human to miss. Humans wouldn't write
-code that way, but in wasm, compilers are *incentivised* to write it that way,
-because it reduces code size. It's going to happen a lot, and the `expr`
-mechanism gives us a way to make this more readable in many cases.
 
 ### Labels
 
@@ -346,75 +334,6 @@ representing the following in nested form:
 avoid very deep nesting in many cases.
 
 ## Pushing and popping
-
-Normally, the preferred way to split up a large expression tree would be to
-simply assign some subtrees to their own local variables. Of course compilers
-can optimize them away as needed.
-
-However, in wasm, introducing locals like that increases code size, so
-compilers producing wasm aren't going to do that. There will be a lot of code
-in the wild with very large monolithic trees. Binary->text translation can't
-introduce local variables, because that would make binary->text->binary lossy.
-
-The solution proposed here: `push` and `pop`. `push` pushes subtrees onto a
-conceptual stack, and `pop` pops them and conceptually connects them to the
-tree that that point. It's important to realize that this is purely a
-text-format device. These constructs just exist to build trees. In the abstract
-wasm semantics and in the binary format, the trees just exist in monolithic
-form.
-
-Now there's a question: how should a binary->text translator decide where to
-split up trees? It turns out, we can let binary->text translators choose what
-they think is best in their situation:
-
- - Split trees at `set_local` operators. This is what the examples here do,
-   and it's balance delivering readability while still keeping the code
-   fairly concise.
- - Split trees at nodes with "side effects" (call, `store`, etc.). This can
-   additionally aid in debugging, as one can clearly see where the side effects
-   occur and step through them.
- - Split trees at *all* points. This essentially puts every instruction on its
-   own line, which may sometimes be useful for single-step debugging scenarios,
-   or for compiler writers.
- - Don't split trees at all. Maximum bushiness.
-
-Each of these strategies map back to the same binary format. A single text
-format can support a wide variety of use cases, because binary->text
-translators can split up trees to fit the need at hand.
-
-
-## Push and pop details
-
-Expressions containing multiple pops perform their pops right-to-left. This is
-surprising at first, but it makes sense when you look at wasm's evaluation order.
-For example:
-
-```
-   push #0 = $foo()
-   push #1 = $bar()
-   $qux(#0, #1)
-```
-
-Clearly, this syntax should evaluate the call to `$foo` before the call to
-`$bar`. And in the wasm semantics, the call to `$qux` evaluates its operands in
-the order they appear. Both of these principles are completely intuitive. Put
-together as they are here, they imply that the first pop corresponds to the
-first push, which effectively means that the pops happen right-to-left.
-
-The `#0` and `#1` are stack-depth indicators, which can be useful in pairing
-up pushes with their corresponding pops.
-
-Some additional rules governing push and pop are:
-
- - Pushed expressions must be popped within the same block as the push.
- - Stack-depth indicators start at 0 at the beginning of each block.
- - Sequences of trees tied together with push and pop must be contiguous.
-   Arbitrary blocks can be placed in the middle of trees, but their return value
-   has to be consumed by some node in the tree.
-
-These rules reflect how the current wasm binary format works. If there are
-changes to wasm, these rules would change accordingly.
-
 
 ## Operators with special syntax
 
@@ -562,14 +481,6 @@ A: The `br_table` construct has multiple labels, and there may be a mix of
    what we have in the spec, so using their actual names avoids needing
    to special-case them.
 
-Q: How about replacing push/pop with something more flexible?
-
-A: Push/pop as described here are meant to be a direct reflection of WebAssembly
-   itself. For example, it would be convenient to replace `push` with
-   something that would allow a value to be used multiple times. However,
-   push/pop are representing expression tree edges in WebAssembly, which
-   can only have a single definition and a single use. The way to use a value
-   multiple times in WebAssembly is to use `set_local` and `get_local`.
 
 Q: Why is, for example, the unsigned shift operator called `>|>` rather than 
    the more logical `|>>`, or even `|>>|`?
