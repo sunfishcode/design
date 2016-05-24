@@ -306,7 +306,6 @@ be printed in a relatively flat manner:
     :green
       // ...
     :default
-      // ...
   }
 ```
 
@@ -333,7 +332,8 @@ representing the following in nested form:
 `br_table`s can have large numbers of labels, so this feature allows us to
 avoid very deep nesting in many cases.
 
-## Pushing and popping
+Note that when a label appears just before the closing `}`, it doesn't introduce
+a new block; it just provides a name for the enclosing block's label.
 
 ## Operators with special syntax
 
