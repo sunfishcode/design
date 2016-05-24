@@ -343,7 +343,7 @@ boolean conditions. The following is a table of special syntax:
 | `set_local` | *name* `=` *expr* | `$x = 1`
 | `call` | `call` *name* `(`*expr* `,` … `)` | `call $min(0, 2)`
 | `call_import` | `call_import` *name* `(`*expr* `,` … `)` | `call_import $max(0, 2)`
-| `call_indirect` | `call_indirect` *signature-name* `[` *expr* `] (`*expr* `,` … `)` | `call_indirect $foo [1] $min(0, 2)`
+| `call_indirect` | `call_indirect` *signature-name* `[` *expr* `] (`*expr* `,` … `)` | `call_indirect $foo [1] (0, 2)`
 
 ## Memory-related operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md#linear-memory-accesses))
 
