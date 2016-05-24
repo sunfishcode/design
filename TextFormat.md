@@ -236,7 +236,7 @@ And here's the proposed text syntax:
 ```
    function $Q_rsqrt($0:f32) : (f32) {
      $1:f32
-     $1 = f32.reinterpret'i32 (1597463007 - ((i32.reinterpret'f32 $0) >> 1))
+     $1 = f32.reinterpret'i32(1597463007 - (i32.reinterpret'f32($0) >> 1))
      $1 = $1 * (0x1.8p0 - $1 * ($0 = $0 * 0x1p-1) * $1)
      $1 * (0x1.8p0 - $1 * $0 * $1)
    }
@@ -343,32 +343,32 @@ conditions use `?`. The following is a table of special syntax:
 
 ## Control flow operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md))
 
-| Name       | Syntax                   | Examples 
-| ---------- | ------------------------ | -------- 
-| `block`    | :*label*                 | `{ br a; :a }`
-| `loop`     | `loop` *label* `{` … `}` | `loop a { br a }`
+| Name       | Syntax                     | Examples 
+| ---------- | -------------------------- | -------- 
+| `block`    | :*label*                   | `{ br a; :a }`
+| `loop`     | `loop` *label* `{` … `}`   | `loop a { br a }`
 | `if`       | `if (`*expr*`)` `{` *expr** `}` | `if ($x) { $f($x) }`
 | `if_else`  | `if (`*expr*`)` `{` *expr** `} else {` *expr** `}` | `if (0) { 1 } else { 2 }`
 | `select`   | `select` *expr* `:` *expr* `?` *expr*`)` | `select 1 : 2 ? $x < $y`
-| `br`       | `br` *label*               | `br a`
-| `br_if`    | `br_if` *label* `?` *expr* | `br_if a ? $x < $y`
+| `br`       | `br` *label* [=> $result]    | `br a`, `br a => $x`
+| `br_if`    | `br_if` *label* `(if` *expr*`)` [`=>` *expr*] | `br a (if $x < $y) => 0`
 | `br_table` | `br_table {` *case-label* `,` … `,` *default-label*] `} from` *expr* | `br_table [a, b, c] : $x`
 
 (TODO: as above, are the `?`s too cute?)
 
 ## Basic operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md#constants))
 
-| Name | Syntax | Example
-| ---- | ---- | ---- |
-| `i32.const` | … | `234`, `0xfff7`
-| `i64.const` | … | `234`, `0xfff7`
-| `f64.const` | … | `0.1p2`, `infinity`, `nan:0x789`
-| `f32.const` | … | `0.1p2`, `infinity`, `nan:0x789`
-| `get_local` | *name* | `$x + 1`
+| Name        | Syntax      | Example
+| ----------- | ----------- | ---- |
+| `i32.const` | see example | `234`, `0xfff7`
+| `i64.const` | see example | `234L`, `0xfff7L`
+| `f64.const` | see example | `0.1p2`, `@inf`, `@nan'0x789`
+| `f32.const` | see example | `0.1p2f`, `@inf_f`, `@nan'0x789`
+| `get_local` | *name* (including the `$`) | `$x`
 | `set_local` | *name* `=` *expr* | `$x = 1`
-| `call` | `call` *name* `(`*expr* `,` … `)` | `call $min(0, 2)`
-| `call_import` | `call_import` *name* `(`*expr* `,` … `)` | `call_import $max(0, 2)`
-| `call_indirect` | `call_indirect` *signature-name* `[` *expr* `] (`*expr* `,` … `)` | `call_indirect $foo [1] $min(0, 2)`
+| `call`      | *name* `(`*expr* `,` … `)` | `$min(0, 2)`
+| `call_import` | `$` *name* `(`*expr* `,` … `)` | `$$max(0, 2)`
+| `call_indirect` | *expr* `::` *signature-name* [`[` *expr* `]`] `(`*expr* `,` … `)` | `$func::$signature(0, 2)`
 
 ## Memory-related operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md#linear-memory-accesses))
 
@@ -376,9 +376,9 @@ conditions use `?`. The following is a table of special syntax:
 | ---- | ---- | ---- |
 | *memory-immediate* | `[` *base-expression* `,` *offset* `]` | `[$base, 4]`
 | `i32.load8_s` | `i32.load8_s [` *base-expression* `, +` *offset-immediate* `]` | `i32.load8_s [$base, +4]`
-| `i32.load8_s` | `i32.load8_s [` *base-expression* `, +` *offset-immediate* `]:align=` *align* | `i32.load8_s [$base, +4]:align=2`
+| `i32.load8_s` | `i32.load8_s [` *base-expression* `, +` *offset-immediate* `, align ` *align* `]` | `i32.load8_s [$base, +4, align 2]`
 | `i32.store8` | `i32.store8 [` *base-expression* `, +` *offset-immediate* `]`, *expr* | `i32.store8 [$base, +4], $value`
-| `i32.store8` | `i32.store8 [` *base-expression* `, +` *offset-immediate* `]:align=` *align* `,` *expr* | `i32.store8 [$base, +4]:align=2, $value`
+| `i32.store8` | `i32.store8 [` *base-expression* `, +` *offset-immediate* `, align ` *align* `]` `=` *expr* | `i32.store8 [$base, +4, align 2] = $value`
 
 The other forms of `load` and `store` are similar.
 
