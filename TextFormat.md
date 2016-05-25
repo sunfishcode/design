@@ -1,4 +1,4 @@
-# Text Format
+# Text Format *DRAFT*
 
 The purpose of this text format is to support:
 * View Source on a WebAssembly module, thus fitting into the Web (where every
@@ -15,8 +15,9 @@ The text format will be standardized, but only for tooling purposes; browsers
 will not parse the textual format on regular web content in order to implement
 WebAssembly semantics.
 
-The text format does not use JavaScript syntax; it is not intended to
-be evaluated or translated directly into JavaScript. There are also
+The text format is neither a subset or superset of JavaScript syntax, and it
+cannot be directly evaluated as JavaScript. Some parts of the syntax resemble
+JavaScript so that it's familiar and readable, however there are also
 substantive reasons to use notation that is different than JavaScript (for
 example, WebAssembly has a 32-bit integer type, and it is represented
 in the text format, since that is the natural thing to do for WebAssembly,
@@ -35,27 +36,7 @@ represented as hexadecimal floating-point as specified by the C99 standard, whic
 IEEE-754-2008 section 5.12.3 also specifies. The textual format may be improved to also
 support more human-readable representations, but never at the cost of accurate representation.
 
-# ~~Official~~*Experimental* Text Format
-
-## This is an experiment!
-
-This document is a sketch of a possible Text Format proposal for WebAssembly to
-use for the "View Source" functionality in browsers. WebAssembly looks enough
-like a programming language that it tends to activate our programmer intuitions
-about syntax, but it differs from normal programming languages in numerous
-respects, so we don't fully trust our intuitions.
-
-So, we're sketching something up, and building a trial implementation of it in
-Firefox. This way, we can try it out on real code in a real browser setting, and
-see if it actually "works" in practice. Maybe we'll like it and propose it to
-the official WebAssembly project. Maybe it'll need changes. Or maybe it'll
-totally flop and we'll drop it and pursue something completely different!
-
-Comments, questions, suggestions, and reactions are welcome on
-[this repo's issue tracker](https://github.com/sunfishcode/design/issues) for
-the moment. As the experiment progresses, we may shift to other discussion
-forums, but for now we're keeping it simple.
-
+# *DRAFT* Official Text Format
 
 ## Philosophy:
 
@@ -67,16 +48,14 @@ forums, but for now we're keeping it simple.
 
  - Curly braces for function bodies, blocks, etc., `/* */`-style and `//`-style
    comments, and whitespace is not significant. Also, no semicolons.
-   (TODO: Should `/* */`-style comments nest properly?)
+   Nested `/* */`-style comments follow JavaScript's rules.
 
  - `get_local` looks like a simple reference; `set_local` looks like an
    assignment. Constants use a simple literal syntax. This makes wasm's most
    frequent opcodes very concise.
 
  - Infix syntax for arithmetic, with simple overloading. Explicit grouping via
-   parentheses. Concise and familiar with JS and others. (TODO: Use C/JS-style
-   operator precedence, or fix
-   [an old mistake](http://www.lysator.liu.se/c/dmr-on-or.html)?)
+   parentheses. Concise and familiar with JS and others.
 
  - Prefix syntax with comma-separated operands for all other operators. For less
    frequent opcodes, prefer just presenting operator names, so that they're easy
@@ -87,8 +66,6 @@ forums, but for now we're keeping it simple.
  - Parentheses around call arguments, eg. `call $functionname(arg, arg, arg)`,
    and `if` conditions, eg. `if ($condition) { call $then() } else { call $else() }`,
    because they're familiar to many people and not too intrusive.
-
- - Allow highly complex trees to be syntactically split up into readable parts.
 
  - Put labels "where they go".
 
@@ -101,18 +78,18 @@ forums, but for now we're keeping it simple.
   function $fac-opt ($a:i64) : (i64) {
     var $x:i64
     $x = 1
-    br_if $end ? $a <s 2
+    br_if $a <s 2, $end
     loop $loop {
       $x = $x * $a
       $a = $a + -1
-      br_if $loop ? $a >s 1
+      br_if $a >s 1, $loop
     }
   $end:
     $x
   }
 ```
 
-(hand-translated from [fac.wast](https://github.com/WebAssembly/spec/blob/master/ml-proto/test/fac.wast))
+(from [fac.wast](https://github.com/WebAssembly/spec/blob/master/ml-proto/test/fac.wast))
 
 The function return type has parentheses for symmetry with the parameter types,
 anticipating adding multiple return values to wasm in the future.
@@ -129,24 +106,23 @@ suffixed with 'u' or 's', respectively.
 The `$` sigil on user names cleanly ensures that they never collide with wasm
 keywords, present or future.
 
-`br_if` uses a question mark to announce the condition operand. `select` does
-also. (TODO: Is this too cute?)
 
 ### Linear memory addresses
 
 ```
   function $test_redundant_load () : (i32) {
     i32.load [8,+0]
-    f32.store [5,+0], -0x0p0
+    f32.store [5,+0], -0x1.8p0
     i32.load [8,+0]
   }
 ```
 
-(hand-translated from [memory_redundancy.wast](https://github.com/WebAssembly/spec/blob/master/ml-proto/test/memory_redundancy.wast))
+(from [memory_redundancy.wast](https://github.com/WebAssembly/spec/blob/master/ml-proto/test/memory_redundancy.wast))
 
 Addresses are printed as `[base,+offset]`. It could be shortened to `[base]` when
-there is no offset; I made the offset explicit above just to illustrate the syntax.
-There can also be an optional `:align=…` for non-natural alignments.
+there is no offset.
+
+Addresses can be followed by an optional `:align=…` for non-natural alignments.
 
 ### A slightly larger example:
 
@@ -270,7 +246,7 @@ nesting of `br_table` to be printed in a relatively flat manner:
 
 ```
   {
-    br_table [$red, $orange, $yellow, $green], $default, $index
+    br_table $index, [$red, $orange, $yellow, $green], $default
   $red:
       // ...
   $orange:
@@ -291,7 +267,7 @@ representing the following in nested form:
       (block $yellow
         (block $orange
           (block $red
-            (br_table [$red, $orange, $yellow, $green] $default (get_local $index))
+            (br_table (get_local $index), [$red, $orange, $yellow, $green] $default)
           )
           // ...
         )
@@ -311,27 +287,31 @@ a new block; it just provides a name for the enclosing block's label.
 
 ## Operators with special syntax
 
-As mentioned earlier, basic arithmetic operators use an infix notation, some
-operators require explicit parentheses, and some operators use `?` to introduce
-boolean conditions. The following is a table of special syntax:
+The default syntax for operators is their opcode name followed by a
+comma-separated list of operands. However, several operators have
+special syntax.
 
 
-## Control flow operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md))
+### Control flow operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md))
 
 | Name | Syntax | Examples
 | ---- | ---- | ---- |
-| `block` | *label*: | `{ br $a a: }`
+| `block` | `{` … *label*: `}` | `{ br $a a: }`
 | `loop` | `loop` *label* `{` … `}` | `loop $a { br $a }`
-| `if` | `if` (*expr*) `{` *expr** `}` | `if (0) { 1 }`
-| `if_else` | `if` (*expr*) `{` *expr** `} else {` *expr**`}` | `if (0) { 1 } else { 2 }`
-| `select` | `select` *expr*, *expr* ? *expr* | `select 1, 2 ? $x < $y`
-| `br` | `br` *label* | `br $a`
-| `br_if` | `br` *label* `?` *expr* | `br $a`, `br $a ? $x < $y`
-| `br_table` | `br_table [` *case-label* `,` … `] ,` *default-label* `,` *expr* | `br_table [$x, $y], $z, 0`
+| `if` | `if` `(` *condition* `)` `{` … `}` | `if (0) { 1 }`
+| `if` | `if` `(` *condition* `) `{` … `} else `{` … `}` | `if (0) { 1 } else { 2 }`
+| `br` | `br` *label* | `br $where`
+| `br` | `br` *expr* `,` *label* | `br $v, $where`
+| `br_if` | `br_if` *expr* `,` *label* | `br_if $x < $y, $where`
+| `br_if` | `br_if` *expr* `,` *condition* `,` *label* | `br_if $v, $x < $y, $where`
+| `br_table` | `br_table` *index-expr* `,` `[` *label* `,` … `]` `,` *default-label* | `br_table $i, [$somewhere, $or_other], $default`
+| `br_table` | `br_table` *expr* `,` *index-expr* `,` `[` *label* `,` … `]` `,` *default-label* | `br_table $v, $i, [$somewhere, $or_other], $default`
+| `return` | `return` | `return`
+| `return` | `return` *expr* | `return $x`
+| `unreachable` | `unreachable` | `unreachable`
 
-(TODO: as above, are the `?`s too cute?)
 
-## Basic operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md#constants))
+### Basic operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md#constants))
 
 | Name | Syntax | Example
 | ---- | ---- | ---- |
@@ -341,129 +321,65 @@ boolean conditions. The following is a table of special syntax:
 | `f32.const` | … | `0.1p2`, `infinity`, `nan:0x789`
 | `get_local` | *name* | `$x + 1`
 | `set_local` | *name* `=` *expr* | `$x = 1`
+| `select` | `select` *expr*, *expr*, *expr* | `select 1, 2, $x < $y`
 | `call` | `call` *name* `(`*expr* `,` … `)` | `call $min(0, 2)`
 | `call_import` | `call_import` *name* `(`*expr* `,` … `)` | `call_import $max(0, 2)`
 | `call_indirect` | `call_indirect` *signature-name* `[` *expr* `] (`*expr* `,` … `)` | `call_indirect $foo [1] (0, 2)`
 
-## Memory-related operators ([described here](https://github.com/WebAssembly/design/blob/master/AstSemantics.md#linear-memory-accesses))
+### Arithmetic operators ([described here](AstSemantics#32-bit-integer-operators))
 
-| Name | Syntax | Example
-| ---- | ---- | ---- |
-| *memory-immediate* | `[` *base-expression* `,` *offset* `]` | `[$base, 4]`
-| `i32.load8_s` | `i32.load8_s [` *base-expression* `, +` *offset-immediate* `]` | `i32.load8_s [$base, +4]`
-| `i32.load8_s` | `i32.load8_s [` *base-expression* `, +` *offset-immediate* `]:align=` *align* | `i32.load8_s [$base, +4]:align=2`
-| `i32.store8` | `i32.store8 [` *base-expression* `, +` *offset-immediate* `]`, *expr* | `i32.store8 [$base, +4], $value`
-| `i32.store8` | `i32.store8 [` *base-expression* `, +` *offset-immediate* `]:align=` *align* `,` *expr* | `i32.store8 [$base, +4]:align=2, $value`
+Arithmetic operators use C/JS-like infix and prefix notation.
 
-The other forms of `load` and `store` are similar.
+Add, sub, mul, div, rem, and, or, xor, shl, and shr operators use
+`+`, `-`, `*`, `/`, `%`, `&`, `|`, `^`, `<<`, and `>>`, respectively.
 
-## Simple operators ([described here](AstSemantics#32-bit-integer-operators))
+`eq`, `ne`, `lt`, `le`, `gt`, `ge`, operators use
+`==`, `!=`, `<`, `<=`, `>`, `>=`, respectively.
 
-| Name | Syntax |
-| ---- | ---- |
-| `i32.add` | … `+` …
-| `i32.sub` | … `-` …
-| `i32.mul` | … `*` …
-| `i32.div_s` | … `/s` …
-| `i32.div_u` | … `/u` …
-| `i32.rem_s` | … `%s` …
-| `i32.rem_u` | … `%u` …
-| `i32.and` | … `&` …
-| `i32.or` | … `|` …
-| `i32.xor` | … `^` …
-| `i32.shl` | … `<<` …
-| `i32.shr_u` | … `>>u` …
-| `i32.shr_s` | … `>>s` …
-| `i32.eq` | … `==` …
-| `i32.ne` | … `!=` …
-| `i32.lt_s` | … `<s` …
-| `i32.le_s` | … `<=s` …
-| `i32.lt_u` | … `<u` …
-| `i32.le_u` | … `<=u` …
-| `i32.gt_s` | … `>s` …
-| `i32.ge_s` | … `>=s` …
-| `i32.gt_u` | … `>u` …
-| `i32.ge_u` | … `>=u` …
-| `i32.eqz` | `!` …
-| `i64.add` | … `+` …
-| `i64.sub` | … `-` …
-| `i64.mul` | … `*` …
-| `i64.div_s` | … `/s` …
-| `i64.div_u` | … `/u` …
-| `i64.rem_s` | … `%s` …
-| `i64.rem_u` | … `%u` …
-| `i64.and` | … `&` …
-| `i64.or` | … `\|` …
-| `i64.xor` | … `^` …
-| `i64.shl` | … `<<` …
-| `i64.shr_u` | … `>>u` …
-| `i64.shr_s` | … `>>s` …
-| `i64.eq` | … `==` …
-| `i64.ne` | … `!=` …
-| `i64.lt_s` | … `<s` …
-| `i64.le_s` | … `<=s` …
-| `i64.lt_u` | … `<u` …
-| `i64.le_u` | … `<=u` …
-| `i64.gt_s` | … `>s` …
-| `i64.ge_s` | … `>=s` …
-| `i64.gt_u` | … `>u` …
-| `i64.ge_u` | … `>=u` …
-| `i64.eqz` | `!` …
-| `f32.add` | … `+` …
-| `f32.sub` | … `-` …
-| `f32.mul` | … `*` …
-| `f32.div` | … `/` …
-| `f32.neg` | `-` …
-| `f32.eq` | … `==` …
-| `f32.ne` | … `!=` …
-| `f32.lt` | … `<` …
-| `f32.le` | … `<=` …
-| `f32.gt` | … `>` …
-| `f32.ge` | … `>=` …
-| `f64.add` | … `+` …
-| `f64.sub` | … `-` …
-| `f64.mul` | … `*` …
-| `f64.div` | … `/` …
-| `f64.neg` | `-` …
-| `f64.eq` | … `==` …
-| `f64.ne` | … `!=` …
-| `f64.lt` | … `<` …
-| `f64.le` | … `<=` …
-| `f64.gt` | … `>` …
-| `f64.ge` | … `>=` …
+`eqz` and `neg` operators use prefix unary `!` and `-`, respectively.
 
-All other operators use their actual name in a prefix notation, such as
-`f32.sqrt …`.
+Signed and unsigned operators are suffixed with `s` and `u`, respectively,
+so `i32.div_s` looks like `/s`, and so on.
 
-## Answers to anticipated questions
+These operators use C/JS-style operator precedence rules, except that in order
+to correct [an old mistake](http://www.lysator.liu.se/c/dmr-on-or.html)),
+it is not valid to rely on precedence alone between a `&`, `|`, or `^` operator
+and another operator of similar precedence. Parentheses are required in such
+contexts in order to ensure that the code reads as intended.
 
-Q: JS avoids sigils, and uses context-sensitive keywords to avoid trouble.
-   Can wasm do this?
+All other arithmetic operators use their actual name in a prefix notation,
+such as `f32.sqrt …`, with comma-seperated operands.
 
-A: Sigils are more of a burden when writing code than reading code, and wasm
-   will mostly be written by compilers. And it's my subjective opinion that
-   it's better to give ourselves maximum flexibility to add new keywords in
-   the future without having to be tricky.
+## Module-level syntax
 
+Type declarations:
 
-Q: Why not let `br` be spelled `break` or `continue` when targeting block and
-   loop, respectively?
+`type $ternary of function (i32,i32,i32) : (i32)`
 
-A: The `br_table` construct has multiple labels, and there may be a mix of
-   forward and backward branches, so it isn't always possible to categorize
-   branches as forward or backward. Also, `br`, `br_if`, and `br_table` are
-   what we have in the spec, so using their actual names avoids needing
-   to special-case them.
+Imports:
 
+`import "print" as $print_int from "global.PrintingStuff" typeof function (f64) : ()`
 
-Q: Why not permit optional semicolons?
+Function table:
 
-A: We don't want people arguing over which way is better. If we don't forbid
-   semicolons, the next best option would be to require semicolons. I've
-   subjectively chosen to forbid semicolons for now.
+`table [$func0,$func1,$func2,…]`
 
+Exports:
+
+`export memory as "memory"`
+
+`export $func0 as "ThisIsFunc0"`
+
+Function definitions and local variables:
+
+```
+function $func0($x : i32, $y : i32, $y : i32) : (f64) {
+    var $a : i32, $b : i64, $c : f32
+```
 
 # Debug symbol integration
+
+## Debug symbol section
 
 The binary format inherently strips names from functions, locals, globals, etc,
 reducing each of these to dense indices. Without help, the text format must
@@ -471,3 +387,11 @@ therefore synthesize new names. However, as part of the [tooling](Tooling.md)
 story, a lightweight, optional "debug symbol" global section may be defined
 which associates names with each indexed entity and, when present, these names
 will be used in the text format projected from a binary WebAssembly module.
+
+## Code references
+
+In the binary format, references to locations in the code are done through
+byte offsets. In the text format, these references are represented symbolically
+with a special label syntax, prefixed by an `@` sign. These labels have no
+semantic effect, and merely serve to identify a location in the code that can
+be referred to from other sections.
