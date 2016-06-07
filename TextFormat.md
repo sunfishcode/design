@@ -73,6 +73,7 @@ support more human-readable representations, but never at the cost of accurate r
 
  - Put labels "where they go".
 
+ - Mark expression nodes in the AST for further reference and metadata annotation.
 
 ## Examples:
 
@@ -301,6 +302,31 @@ avoid very deep nesting in many cases.
 
 Note that when a label appears just before the closing `}`, it doesn't introduce
 a new block; it just provides a name for the enclosing block's label.
+
+### Rerefence AST nodes.
+
+Marking AST nodes for e.g. a reference from a debug section. In a separate
+section this or different file, these references can be used to identify
+a range of the code or provide mapping of the original source to the AST.
+
+```
+  function $fib($0: i32): (i32) {
+    @1 if ($1 >u 1) {
+      @2(call $fib($0 - 2) + call $fib($0 - 1))
+    } else {
+      @3 if ($1 == 1) {
+        @4 1
+      } else {
+        @5 0
+      }
+    }
+  }
+```
+
+With proper syntax hightlight, these marks will not distract attention from
+reading the main idea of the code. However it will be useful to preseve
+references to particular AST node for round-trip tools and debuggers.
+
 
 ## Operators with special syntax
 
