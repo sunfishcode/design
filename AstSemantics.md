@@ -200,13 +200,20 @@ Out of bounds accesses trap.
 
 ### Resizing
 
-In the MVP, linear memory can be resized by a `grow_memory` operator. This
-operator requires its operand to be a multiple of the WebAssembly page size,
-which is 64KiB on all engines (though large page support may be added in 
+In the MVP, linear memory can be resized by a `grow_memory` operator. The
+operand to this operator is in units of the WebAssembly page size,
+which is defined to be 64KiB (though large page support may be added in 
 the [future](FutureFeatures.md#large-page-support)).
 
- * `grow_memory` : grow linear memory by a given unsigned delta which
-    must be a multiple of the page size. Return the previous memory size.
+ * `grow_memory` : grow linear memory by a given unsigned delta of pages.
+    Return the previous memory size in units of pages or -1 on failure.
+
+When a maximum memory size is declared in the [memory section](Module.md#linear-memory-section),
+`grow_memory` must fail if it would grow past the maximum. However,
+`grow_memory` may still fail before the maximum if it was not possible to
+reserve the space up front or if enabling the reserved memory fails.
+When there is no maximum memory size declared, `grow_memory` is expected
+to perform a system allocation which may fail.
 
 As stated [above](AstSemantics.md#linear-memory), linear memory is contiguous,
 meaning there are no "holes" in the linear address space. After the
@@ -248,7 +255,7 @@ a value and may appear as children of other expressions.
  * `if_else`: if expression with *then* and *else* expressions
  * `br`: branch to a given label in an enclosing construct
  * `br_if`: conditionally branch to a given label in an enclosing construct
- * `tableswitch`: a jump table which jumps to a label in an enclosing construct
+ * `br_table`: a jump table which jumps to a label in an enclosing construct
  * `return`: return zero or more values from this function
 
 ### Branches and nesting
@@ -266,7 +273,7 @@ further see the parallel, note that a `br` to a `block`'s label is functionally
 equivalent to a labeled `break` in high-level languages in that a `br` simply
 breaks out of a `block`.
 
-Branches that exit a `block`, `loop`, or `tableswitch` may take a subexpression
+Branches that exit a `block`, `loop`, or `br_table` may take a subexpression
 that yields a value for the exited construct. If present, it is the first operand
 before any others.
 
@@ -278,13 +285,12 @@ Other control constructs may yield values if their subexpressions yield values:
 * `block`: yields either the value of the last expression in the block or the result of an inner `br` that targeted the label of the block
 * `loop`: yields either the value of the last expression in the loop or the result of an inner `br` that targeted the end label of the loop
 * `if_else`: yields either the value of the true expression or the false expression
-* `tableswitch`: yields the result of an inner `br` that targeted the tableswitch
 
 
-### Tableswitch
+### `br_table`
 
-A `tableswitch` consists of a zero-based array of labels, a *default* label,
-and an index operand. A `tableswitch` jumps to the label indexed in the array
+A `br_table` consists of a zero-based array of labels, a *default* label,
+and an index operand. A `br_table` jumps to the label indexed in the array
 or the default label if the index is out of bounds.
 
 
@@ -397,6 +403,7 @@ results into the result type.
   * `i32.clz`: sign-agnostic count leading zero bits (All zero bits are considered leading if the value is zero)
   * `i32.ctz`: sign-agnostic count trailing zero bits (All zero bits are considered trailing if the value is zero)
   * `i32.popcnt`: sign-agnostic count number of one bits
+  * `i32.eqz`: compare equal to zero (return 1 if operand is zero, 0 otherwise)
 
 Shifts counts are wrapped to be less than the log-base-2 of the number of bits
 in the value to be shifted, as an unsigned quantity. For example, in a 32-bit
