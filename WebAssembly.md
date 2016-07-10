@@ -1055,18 +1055,186 @@ are bound to.
 WebAssembly instructions may belong to several families, indicated in the tables
 by their family letter:
 
-0. [M: Linear-Memory Access Instruction Family][M]
-0. [R: Linear-Memory Size Instruction Family][R]
 0. [B: Branch Instruction Family][B]
+0. [Q: Control-Flow Barrier Instruction Family][Q]
 0. [L: Call Instruction Family][L]
-0. [C: Comparison Instruction Family][C]
-0. [T: Shift Instruction Family][T]
 0. [G: Generic Integer Instruction Family][G]
 0. [S: Signed Integer Instruction Family][S]
 0. [U: Unsigned Integer Instruction Family][U]
+0. [T: Shift Instruction Family][T]
 0. [F: Floating-Point Instruction Family][F]
 0. [Z: Floating-Point Bitwise Instruction Family][Z]
-0. [Q: Control-Flow Barrier Instruction Family][Q]
+0. [C: Comparison Instruction Family][C]
+0. [M: Linear-Memory Access Instruction Family][M]
+0. [R: Linear-Memory Size Instruction Family][R]
+
+#### B: Branch Instruction Family
+
+##### Branching
+
+In a branch according to a given control-flow stack entry, first the value stack
+is resized down to the entry's limit value.
+
+Then, if the entry's [label] is bound, the current position is set to the bound
+position. Otherwise, the position to bind the label to is found by scanning
+forward through the instructions, as if executing just [`block`](#block),
+[`loop`](#loop), and [`end`](#end) instructions, until the label is bound. Then
+the current position is set to that position.
+
+Then, control-flow stack entries are popped until the given control-flow stack
+entry is popped.
+
+> In practice, implementations may precompute the destinations of branches so
+that they don't literally need to scan in this manner.
+
+> Branching is sometimes called "jumping" in other languages.
+
+#### Q: Control-Flow Barrier Instruction Family
+
+These instructions either trap or reassign the current position, such that
+execution does not proceed to the instruction that lexically follows them.
+
+#### L: Call Instruction Family
+
+##### Calling
+
+If the called function&mdash;the *callee*&mdash;is a function in the module, it
+is [executed](#function-execution). Otherwise the callee is an imported function
+which is executed according to its own semantics. The `$args` operands,
+excluding `$callee` when present, are passed as the incoming arguments. The
+return value of the call is defined by the execution.
+
+At least one unit of [call-stack resources] is consumed during the execution of
+the callee, and released when it completes.
+
+**Trap:** Call Stack Exhausted, if the instance has insufficient
+[call-stack resources].
+
+> This means that implementations aren't permitted to perform implicit
+opportunistic tail-call elimination.
+
+> The execution state of the function currently being executed remains live
+during the call, and the execution of the called function is performed
+independently. In this way, calls form a stack-like data structure called the
+*call stack*.
+
+> Data associated with the call stack is stored outside any linear address space
+and is not directly accessible to applications.
+
+##### Call Validation
+
+ - `$arity` is required to be equal to `$args`.
+
+> The `$arity` immediate operand provides no semantic content other than its
+validation requirement.
+
+#### G: Generic Integer Instruction Family
+
+Except where otherwise specified, these instructions don't specifically
+interpret their operands as explicitly signed or unsigned, and therefore don't
+have an inherent concept of overflow.
+
+#### S: Signed Integer Instruction Family
+
+Except where otherwise specified, these instructions interpret their operand
+values as signed, return result values interpreted as signed, and [trap] when
+the result value can't be represented as such.
+
+#### U: Unsigned Integer Instruction Family
+
+Except where otherwise specified, these instructions interpret their operand
+values as unsigned, return result values interpreted as unsigned, and [trap]
+when the result value can't be represented as such.
+
+#### T: Shift Instruction Family
+
+In the shift and rotate instructions, *left* means in the direction of greater
+significance, and *right* means in the direction of lesser significance.
+
+##### Shift Count
+
+The second operand in shift and rotate instructions specifies a *shift count*,
+which is interpreted as an unsigned quantity modulo the number of bits in the
+first operand.
+
+> As a result of the modulo, in `i32.` instructions, only the least-significant
+5 bits of the second operand affect the result, and in `i64.` instructions only
+the least-significant 6 bits of the second operand affect the result.
+
+> The shift count is interpreted as unsigned even in otherwise signed
+instructions such as [`shr_s`](#integer-shift-right-signed).
+
+#### F: Floating-Point Instruction Family
+
+Instructions in this family follow the [IEEE 754-2008] standard, except that:
+
+ - They support only "non-stop" mode, and floating-point exceptions aren't
+   otherwise observable. In particular, neither alternate floating-point
+   exception handling attributes nor the non-computational operations on status
+   flags are supported.
+
+ - They use the IEEE 754-2008 `roundTiesToEven` rounding attribute, except where
+   otherwise specified. Non-default directed rounding attributes aren't
+   supported.
+
+When the result of any instruction in this family (which excludes `neg`, `abs`,
+and `copysign`) is a NaN, the sign bit and the significand field (which doesn't
+include the implicit leading digit of the significand) of the NaN are computed
+by one of the following rules, selected [nondeterministically]:
+
+ - If the instructions has any NaN non-immediate operand values, implementations
+   may [nondeterministically] select any of them to be the result value, but
+   with the most significant bit of the significand field overwritten to be `1`.
+
+ - If the implementation doesn't choose to use an input NaN as a result value,
+   or if there are no input NaNs, the result value has a [nondeterministic] sign
+   bit, a significand field with `1` in the most significant bit and `0` in the
+   remaining bits.
+
+TODO: How does NaN propagation work? Monitor
+https://github.com/WebAssembly/design/pull/713
+
+Implementations are permitted to further implement the IEEE 754-2008 section
+"Operations with NaNs" recommendation that operations propagate NaN bits from
+their operands, however it isn't required.
+
+> The exception and rounding behavior specified here are the default behavior on
+most contemporary software environments.
+
+> All computations are correctly rounded, subnormal values are fully supported,
+and negative zero, NaNs, and infinities are all produced as result values to
+indicate overflow, invalid, and divide-by-zero exceptional conditions, and
+interpreted appropriately when they appear as operands. Compiler optimizations
+that introduce changes to the effective precision, rounding, or range of any
+computation are not permitted. All numeric results are deterministic, as are the
+rules for how NaNs are handled as operands and for when NaNs are to be generated
+as results. The only floating-point nondeterminism is in the specific
+bit-patterns of NaN result values.
+
+> In IEEE 754-1985, ["subnormal numbers"] are called "denormal numbers";
+WebAssembly follows IEEE 754-2008, which calls them "subnormal numbers".
+
+> There is no observable difference between quiet and signaling NaN other than
+the difference in the bit pattern.
+
+[IEEE 754-2008]: https://en.wikipedia.org/wiki/IEEE_floating_point
+["subnormal numbers"]: https://en.wikipedia.org/wiki/Subnormal_number
+
+#### Z: Floating-Point Bitwise Instruction Family
+
+These instructions operate on floating-point values, but do so in purely bitwise
+ways, including in how they operate on NaN and zero values.
+
+They correspond to the "Sign bit operations" in IEEE 754-2008.
+
+#### C: Comparison Instruction Family
+
+WebAssembly comparison instructions compare two values and return a [boolean]
+result value.
+
+> In accordance with IEEE 754-2008, for the comparison instructions, negative
+zero is considered equal to zero, and NaN values aren't less than, greater than,
+or equal to any other values, including themselves.
 
 #### M: Linear-Memory Access Instruction Family
 
@@ -1133,174 +1301,6 @@ TODO: Should linear-memory accesses have a linear-memory-space immediate?
 
 TODO: Should linear-memory size instructions have a linear-memory-space
 immediate?
-
-#### B: Branch Instruction Family
-
-##### Branching
-
-In a branch according to a given control-flow stack entry, first the value stack
-is resized down to the entry's limit value.
-
-Then, if the entry's [label] is bound, the current position is set to the bound
-position. Otherwise, the position to bind the label to is found by scanning
-forward through the instructions, as if executing just [`block`](#block),
-[`loop`](#loop), and [`end`](#end) instructions, until the label is bound. Then
-the current position is set to that position.
-
-Then, control-flow stack entries are popped until the given control-flow stack
-entry is popped.
-
-> In practice, implementations may precompute the destinations of branches so
-that they don't literally need to scan in this manner.
-
-> Branching is sometimes called "jumping" in other languages.
-
-#### L: Call Instruction Family
-
-##### Calling
-
-If the called function&mdash;the *callee*&mdash;is a function in the module, it
-is [executed](#function-execution). Otherwise the callee is an imported function
-which is executed according to its own semantics. The `$args` operands,
-excluding `$callee` when present, are passed as the incoming arguments. The
-return value of the call is defined by the execution.
-
-At least one unit of [call-stack resources] is consumed during the execution of
-the callee, and released when it completes.
-
-**Trap:** Call Stack Exhausted, if the instance has insufficient
-[call-stack resources].
-
-> This means that implementations aren't permitted to perform implicit
-opportunistic tail-call elimination.
-
-> The execution state of the function currently being executed remains live
-during the call, and the execution of the called function is performed
-independently. In this way, calls form a stack-like data structure called the
-*call stack*.
-
-> Data associated with the call stack is stored outside any linear address space
-and is not directly accessible to applications.
-
-##### Call Validation
-
- - `$arity` is required to be equal to `$args`.
-
-> The `$arity` immediate operand provides no semantic content other than its
-validation requirement.
-
-#### C: Comparison Instruction Family
-
-WebAssembly comparison instructions compare two values and return a [boolean]
-result value.
-
-> In accordance with IEEE 754-2008, for the comparison instructions, negative
-zero is considered equal to zero, and NaN values aren't less than, greater than,
-or equal to any other values, including themselves.
-
-#### T: Shift Instruction Family
-
-In the shift and rotate instructions, *left* means in the direction of greater
-significance, and *right* means in the direction of lesser significance.
-
-##### Shift Count
-
-The second operand in shift and rotate instructions specifies a *shift count*,
-which is interpreted as an unsigned quantity modulo the number of bits in the
-first operand.
-
-> As a result of the modulo, in `i32.` instructions, only the least-significant
-5 bits of the second operand affect the result, and in `i64.` instructions only
-the least-significant 6 bits of the second operand affect the result.
-
-> The shift count is interpreted as unsigned even in otherwise signed
-instructions such as [`shr_s`](#integer-shift-right-signed).
-
-#### G: Generic Integer Instruction Family
-
-Except where otherwise specified, these instructions don't specifically
-interpret their operands as explicitly signed or unsigned, and therefore don't
-have an inherent concept of overflow.
-
-#### S: Signed Integer Instruction Family
-
-Except where otherwise specified, these instructions interpret their operand
-values as signed, return result values interpreted as signed, and [trap] when
-the result value can't be represented as such.
-
-#### U: Unsigned Integer Instruction Family
-
-Except where otherwise specified, these instructions interpret their operand
-values as unsigned, return result values interpreted as unsigned, and [trap]
-when the result value can't be represented as such.
-
-#### F: Floating-Point Instruction Family
-
-Instructions in this family follow the [IEEE 754-2008] standard, except that:
-
- - They support only "non-stop" mode, and floating-point exceptions aren't
-   otherwise observable. In particular, neither alternate floating-point
-   exception handling attributes nor the non-computational operations on status
-   flags are supported.
-
- - They use the IEEE 754-2008 `roundTiesToEven` rounding attribute, except where
-   otherwise specified. Non-default directed rounding attributes aren't
-   supported.
-
-When the result of any instruction in this family (which excludes `neg`, `abs`,
-and `copysign`) is a NaN, the sign bit and the significand field (which doesn't
-include the implicit leading digit of the significand) of the NaN are computed
-by one of the following rules, selected [nondeterministically]:
-
- - If the instructions has any NaN non-immediate operand values, implementations
-   may [nondeterministically] select any of them to be the result value, but
-   with the most significant bit of the significand field overwritten to be `1`.
-
- - If the implementation doesn't choose to use an input NaN as a result value,
-   or if there are no input NaNs, the result value has a [nondeterministic] sign
-   bit, a significand field with `1` in the most significant bit and `0` in the
-   remaining bits.
-
-TODO: How does NaN propagation work? Monitor
-https://github.com/WebAssembly/design/pull/713
-
-Implementations are permitted to further implement the IEEE 754-2008 section
-"Operations with NaNs" recommendation that operations propagate NaN bits from
-their operands, however it isn't required.
-
-> The exception and rounding behavior specified here are the default behavior on
-most contemporary software environments.
-
-> All computations are correctly rounded, subnormal values are fully supported,
-and negative zero, NaNs, and infinities are all produced as result values to
-indicate overflow, invalid, and divide-by-zero exceptional conditions, and
-interpreted appropriately when they appear as operands. Compiler optimizations
-that introduce changes to the effective precision, rounding, or range of any
-computation are not permitted. All numeric results are deterministic, as are the
-rules for how NaNs are handled as operands and for when NaNs are to be generated
-as results. The only floating-point nondeterminism is in the specific
-bit-patterns of NaN result values.
-
-> In IEEE 754-1985, ["subnormal numbers"] are called "denormal numbers";
-WebAssembly follows IEEE 754-2008, which calls them "subnormal numbers".
-
-> There is no observable difference between quiet and signaling NaN other than
-the difference in the bit pattern.
-
-[IEEE 754-2008]: https://en.wikipedia.org/wiki/IEEE_floating_point
-["subnormal numbers"]: https://en.wikipedia.org/wiki/Subnormal_number
-
-#### Z: Floating-Point Bitwise Instruction Family
-
-These instructions operate on floating-point values, but do so in purely bitwise
-ways, including in how they operate on NaN and zero values.
-
-They correspond to the "Sign bit operations" in IEEE 754-2008.
-
-#### Q: Control-Flow Barrier Instruction Family
-
-These instructions either trap or reassign the current position, such that
-execution does not proceed to the instruction that lexically follows them.
 
 ### Instruction Opcode Field
 
@@ -2765,18 +2765,18 @@ linear-memory space, as an unsigned value in units of [pages].
 **Validation**:
  - [Linear-memory size validation](#linear-memory-size-validation) is required.
 
-[M]: #m-linear-memory-access-instruction-family
-[R]: #r-linear-memory-size-instruction-family
 [B]: #b-branch-instruction-family
+[Q]: #q-control-flow-barrier-instruction-family
 [L]: #l-call-instruction-family
-[C]: #c-comparison-instruction-family
-[T]: #t-shift-instruction-family
 [G]: #g-generic-integer-instruction-family
 [S]: #s-signed-integer-instruction-family
 [U]: #u-unsigned-integer-instruction-family
+[T]: #t-shift-instruction-family
 [F]: #f-floating-point-instruction-family
 [Z]: #z-floating-point-bitwise-instruction-family
-[Q]: #q-control-flow-barrier-instruction-family
+[C]: #c-comparison-instruction-family
+[M]: #m-linear-memory-access-instruction-family
+[R]: #r-linear-memory-size-instruction-family
 [Type Section]: #type-section
 [Import Section]: #import-section
 [Function Section]: #function-section
