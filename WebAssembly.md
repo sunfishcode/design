@@ -1012,17 +1012,44 @@ convention of ending in "_s" and "_u" respectively.
 Immediates, if present, is a list of [typed] value names, representing values
 provided by the module itself as input to an instruction.
 
+As a special case, an immediate field can also contain `TABLE`, which signifies
+a branch table, which is a sequence of immediate integer values. This is for use
+in the [`br_table`](#table-branch) instruction.
+
 ### Instruction Signature Field
 
 Instruction signatures describe the explicit inputs and outputs to an
 instruction. They are described in the following form:
 
-   `(` *operands* `)` `:` `(` *returns* `)`
+`(` *operands* `)` `:` `(` *returns* `)`
 
-*Operands* is a list of [typed] value names representing values provided by
-program execution as input to an instruction. *returns* is a list of [types],
-representing values computed by an instruction that are provided back to the
-program execution.
+*Operands* describes a list of [types] for values provided by program execution
+as input to an instruction. *returns* describes a list of [types] for values
+computed by the instruction that are provided back to the program execution.
+
+Within the signature for a [linear-memory access instruction][M], `iPTR` refers
+an integer [type] with the index bitwidth of the accessed linear-memory space.
+
+Besides literal [types], descriptions of [types] can be from the following
+mechanisms:
+ - A [typed] value name of the form
+
+   *name*`:` *type*
+
+   where *name* just provides an identifier for use in
+   [instruction descriptions](#instruction-description). It is replaced by
+   *type*.
+ - A type parameter list of the form
+
+   *name*`[` *length* `]`
+
+   where *name* identifies the list, and *length* gives the length of the list.
+   The length may be a literal value, an immediate operand value, or one of the
+   named values defined below. Each type parameter in the list may be *bound* to
+   a type as described in the instruction's description, or it may be inferred
+   from the type of a corresponding operand value. The parameter list is
+   replaced by the types bound to its parameters. If the list appears multiple
+   times in a signature, it is replaced by the same types at each appearance.
 
 The following named values are defined:
  - `$args` is defined in [call instructions][L] and indicates the length of the
@@ -1033,22 +1060,6 @@ The following named values are defined:
    enclosing region. Within the validation algorithm, this is the difference
    between the length of the type stack and the control-flow stack top's limit
    value.
-
-A few special constructs are used for special purposes:
- - `iPTR` is for use with a linear-memory access, and signifies the integer type
-   associated with addresses within the accessed linear-memory space.
- - `TABLE` indicates a branch table, which is a sequence of immediate integer
-   values for use in the [table branch](#table-branch) instruction.
- - `T[x]` is used in type-generic instructions to denote a heterogeneous list of
-   type parameters, where `T` is the name of the list, and `x` is either one of
-   the above named values, an immediate operand, or a literal value, and
-   signifies the length.
-
-*Type parameters* are initially *unbound*. They may be *bound* to a type by the
-instruction's semantics, or if their first reference in a signature is in the
-operands section, they are bound to the types of the values passed to them. Once
-bound, subsequent references to them act as direct references to the types they
-are bound to.
 
 ### Instruction Families Field
 
@@ -1123,6 +1134,9 @@ and is not directly accessible to applications.
 
 ##### Call Validation
 
+ - The members of `$T[$args]` are bound to the operand types of the callee
+   signature, and the members of `$T[$returns]` are bound to the return types of
+   the callee signature.
  - `$arity` is required to be equal to `$args`.
 
 > The `$arity` immediate operand provides no semantic content other than its
@@ -1401,9 +1415,9 @@ https://github.com/WebAssembly/design/pull/710
 
 #### Unconditional Branch
 
-| Mnemonic    | Immediates                 | Signature                   | Families | Opcode |
-| ----------- | -------------------------- | --------------------------- | -------- | ------ |
-| `br`        | `$arity: i32, $depth: i32` | `(T[$arity]) : (T[$arity])` | [B] [Q]  | 0x06   |
+| Mnemonic    | Immediates                 | Signature                     | Families | Opcode |
+| ----------- | -------------------------- | ----------------------------- | -------- | ------ |
+| `br`        | `$arity: i32, $depth: i32` | `($T[$arity]) : ($T[$arity])` | [B] [Q]  | 0x06   |
 
 The `br` instruction [branches](#branching) according to the control flow stack
 entry `$depth` from the top. It returns the values of its operands.
@@ -1420,9 +1434,9 @@ TODO: This anticipates a proposal to make `br`, `br_table`, `return`, and
 
 #### Conditional Branch
 
-| Mnemonic    | Immediates                 | Signature                                    | Families | Opcode |
-| ----------- | -------------------------- | -------------------------------------------- | -------- | ------ |
-| `br_if`     | `$arity: i32, $depth: i32` | `(T[$arity], $condition: i32) : (T[$arity])` | [B]      | 0x07   |
+| Mnemonic    | Immediates                 | Signature                                      | Families | Opcode |
+| ----------- | -------------------------- | ---------------------------------------------- | -------- | ------ |
+| `br_if`     | `$arity: i32, $depth: i32` | `($T[$arity], $condition: i32) : ($T[$arity])` | [B]      | 0x07   |
 
 If `$condition` is [true], the `br_if` instruction [branches](#branching)
 according to the control flow stack entry `$depth` from the top. Otherwise, it
@@ -1443,9 +1457,9 @@ https://github.com/WebAssembly/design/pull/709
 
 #### Table Branch
 
-| Mnemonic    | Immediates                          | Signature                                | Families | Opcode |
-| ----------- | ----------------------------------- | ---------------------------------------- | -------- | ------ |
-| `br_table`  | `$arity: i32, TABLE, $default: i32` | `(T[$arity], $index: i32) : (T[$arity])` | [B] [Q]  | 0x08   |
+| Mnemonic    | Immediates                          | Signature                                  | Families | Opcode |
+| ----------- | ----------------------------------- | ------------------------------------------ | -------- | ------ |
+| `br_table`  | `$arity: i32, TABLE, $default: i32` | `($T[$arity], $index: i32) : ($T[$arity])` | [B] [Q]  | 0x08   |
 
 First, the `br_table` instruction selects a depth to use. If `$index` is within
 the bounds of the table, the depth is the value of the indexed table element.
@@ -1488,9 +1502,9 @@ https://github.com/WebAssembly/design/pull/710
 
 #### Else
 
-| Mnemonic    | Signature                   | Families | Opcode |
-| ----------- | --------------------------- | -------- | ------ |
-| `else`      | `(T[$any]) : (T[$any])`     | [B]      | 0x04   |
+| Mnemonic    | Signature                     | Families | Opcode |
+| ----------- | ----------------------------- | -------- | ------ |
+| `else`      | `($T[$any]) : ($T[$any])`     | [B]      | 0x04   |
 
 The `else` instruction binds the control-flow stack top's [label] to the current
 position, pops an entry from the control-flow stack, pushes a new unbound
@@ -1509,9 +1523,9 @@ label. It returns the values of its operands.
 
 #### End
 
-| Mnemonic    | Signature                   | Families | Opcode |
-| ----------- | --------------------------- | -------- | ------ |
-| `end`       | `(T[$any]) : (T[$any])`     |          | 0x0f   |
+| Mnemonic    | Signature                     | Families | Opcode |
+| ----------- | ----------------------------- | -------- | ------ |
+| `end`       | `($T[$any]) : ($T[$any])`     |          | 0x0f   |
 
 The `end` instruction pops an entry from the control-flow stack. If the entry's
 [label] is unbound, the label is bound to the current position. It returns the
@@ -1529,9 +1543,9 @@ values of its operands.
 
 #### Return
 
-| Mnemonic    | Immediates    | Signature                   | Families | Opcode |
-| ----------- | ------------- | --------------------------- | -------- | ------ |
-| `return`    | `$arity: i32` | `(T[$arity]) : (T[$arity])` | [B] [Q]  | 0x09   |
+| Mnemonic    | Immediates    | Signature                     | Families | Opcode |
+| ----------- | ------------- | ----------------------------- | -------- | ------ |
+| `return`    | `$arity: i32` | `($T[$arity]) : ($T[$arity])` | [B] [Q]  | 0x09   |
 
 The `return` instruction [branches](#branching) according to the control-flow
 stack bottom. It returns the values of its operands.
@@ -1582,9 +1596,9 @@ The `nop` instruction does nothing.
 
 #### Drop
 
-| Mnemonic    | Signature                   | Families | Opcode |
-| ----------- | --------------------------- | -------- | ------ |
-| `drop`      | `(T[1]) : ()`               |          | 0x0b   |
+| Mnemonic    | Signature                    | Families | Opcode |
+| ----------- | ---------------------------- | -------- | ------ |
+| `drop`      | `($T[1]) : ()`               |          | 0x0b   |
 
 The `drop` instruction does nothing.
 
@@ -1611,7 +1625,7 @@ https://github.com/WebAssembly/design/pull/696
 
 | Mnemonic    | Immediates | Signature      | Families | Opcode |
 | ----------- | ---------- | -------------- | -------- | ------ |
-| `get_local` | `$id: i32` | `() : (T[1])`  |          | 0x14   |
+| `get_local` | `$id: i32` | `() : ($T[1])` |          | 0x14   |
 
 The `get_local` instruction returns the value of the local at index `$id` in the
 locals array. The type parameter is bound to the type of the local.
@@ -1623,7 +1637,7 @@ locals array. The type parameter is bound to the type of the local.
 
 | Mnemonic    | Immediates | Signature      | Families | Opcode |
 | ----------- | ---------- | -------------- | -------- | ------ |
-| `set_local` | `$id: i32` | `(T[1]) : ()`  |          | 0x15   |
+| `set_local` | `$id: i32` | `($T[1]) : ()` |          | 0x15   |
 
 The `set_local` instruction sets the value of the local at index `$id` in the
 locals array to the value given in the operand. The type parameter is bound to
@@ -1637,9 +1651,9 @@ the type of the local.
 
 #### Tee Local
 
-| Mnemonic    | Immediates | Signature         | Families | Opcode |
-| ----------- | ---------- | ----------------- | -------- | ------ |
-| `tee_local` | `$id: i32` | `(T[1]) : (T[1])` |          | 0x19   |
+| Mnemonic    | Immediates | Signature           | Families | Opcode |
+| ----------- | ---------- | ------------------- | -------- | ------ |
+| `tee_local` | `$id: i32` | `($T[1]) : ($T[1])` |          | 0x19   |
 
 The `tee_local` instruction sets the value of the locals at index `$id` in the
 locals array to the value given in the operand. Its return value is the value of
@@ -1656,9 +1670,9 @@ return value.
 
 #### Get Global
 
-| Mnemonic     | Immediates | Signature     | Families | Opcode |
-| ------------ | ---------- | ------------- | -------- | ------ |
-| `get_global` | `$id: i32` | `() : (T[1])` |          | TODO   |
+| Mnemonic     | Immediates | Signature      | Families | Opcode |
+| ------------ | ---------- | -------------- | -------- | ------ |
+| `get_global` | `$id: i32` | `() : ($T[1])` |          | TODO   |
 
 The `get_global` instruction returns the value of the global identified by index
 `$id` in the [global index space]. The type parameter is bound to the type of
@@ -1669,9 +1683,9 @@ the global.
 
 #### Set Global
 
-| Mnemonic     | Immediates | Signature     | Families | Opcode |
-| ------------ | ---------- | ------------- | -------- | ------ |
-| `set_global` | `$id: i32` | `(T[1]) : ()` |          | TODO   |
+| Mnemonic     | Immediates | Signature      | Families | Opcode |
+| ------------ | ---------- | -------------- | -------- | ------ |
+| `set_global` | `$id: i32` | `($T[1]) : ()` |          | TODO   |
 
 The `set_global` instruction sets the value of the global identified by index
 `$id` in the [global index space] to the value given in the operand. The type
@@ -1683,9 +1697,9 @@ parameter is bound to the type of the global.
 
 #### Select
 
-| Mnemonic    | Signature                                | Families | Opcode |
-| ----------- | ---------------------------------------- | -------- | ------ |
-| `select`    | `(T[1], T[1], $condition: i32) : (T[1])` |          | 0x16   |
+| Mnemonic    | Signature                                   | Families | Opcode |
+| ----------- | ------------------------------------------- | -------- | ------ |
+| `select`    | `($T[1], $T[1], $condition: i32) : ($T[1])` |          | 0x16   |
 
 The `select` instruction returns its first operand if `$condition` is [true], or
 its second operand otherwise.
@@ -1698,9 +1712,9 @@ https://github.com/WebAssembly/design/pull/695
 
 #### Call
 
-| Mnemonic    | Immediates                  | Signature                    | Families | Opcode |
-| ----------- | --------------------------- | ---------------------------- | -------- | ------ |
-| `call`      | `$arity: i32, $callee: i32` | `(T[$args]) : (T[$returns])` | [L]      | 0x17   |
+| Mnemonic    | Immediates                  | Signature                      | Families | Opcode |
+| ----------- | --------------------------- | ------------------------------ | -------- | ------ |
+| `call`      | `$arity: i32, $callee: i32` | `($T[$args]) : ($T[$returns])` | [L]      | 0x17   |
 
 The `call` instruction performs a [call](#calling) to the function with index
 `$callee` in the [function index space].
@@ -1715,9 +1729,9 @@ https://github.com/WebAssembly/design/pull/695
 
 #### Indirect Call
 
-| Mnemonic        | Immediates                     | Signature                                  | Families | Opcode |
-| --------------- | ------------------------------ | ------------------------------------------ | -------- | ------ |
-| `call_indirect` | `$arity: i32, $signature: i32` | `($callee: i32, T[$args]) : (T[$returns])` | [L]      | 0x18   |
+| Mnemonic        | Immediates                     | Signature                                    | Families | Opcode |
+| --------------- | ------------------------------ | -------------------------------------------- | -------- | ------ |
+| `call_indirect` | `$arity: i32, $signature: i32` | `($callee: i32, $T[$args]) : ($T[$returns])` | [L]      | 0x18   |
 
 The `call_indirect` instruction performs a [call](#calling) to the function in
 the default table with index `$callee`.
