@@ -983,6 +983,7 @@ tables giving a concise description of several of their attributes, followed by
 additional content.
 
 0. [Instruction Mnemonic Field](#instruction-mnemonic-field)
+0. [Instruction Immediates Field](#instruction-immediates-field)
 0. [Instruction Signature Field](#instruction-signature-field)
 0. [Instruction Families Field](#instruction-families-field)
 0. [Instruction Opcode Field](#instruction-opcode-field)
@@ -1006,20 +1007,22 @@ convention of ending in "_s" and "_u" respectively.
 
 [mnemonics]: https://en.wikipedia.org/wiki/Assembly_language#Opcode_mnemonics_and_extended_mnemonics
 
+### Instruction Immediates Field
+
+Immediates, if present, is a list of [typed] value names, representing values
+provided by the module itself as input to an instruction.
+
 ### Instruction Signature Field
 
 Instruction signatures describe the explicit inputs and outputs to an
-instruction. They are described in either of the following forms:
+instruction. They are described in the following form:
 
  - `(` *operands* `)` `:` `(` *returns* `)`
- - `<` *immediates* `>` `(` *operands* `)` `:` `(` *returns* `)`
 
-*Immediates*, if present, is a list of [typed] value names, representing values
-provided by the module itself as input to an instruction. *Argument types* is a
-list of [typed] value names representing values provided by program execution as
-input to an instruction. *Return types* is a list of [types], representing
-values computed by an instruction that are provided back to the program
-execution.
+*Operands* is a list of [typed] value names representing values provided by
+program execution as input to an instruction. *returns* is a list of [types],
+representing values computed by an instruction that are provided back to the
+program execution.
 
 The following named values are defined:
  - `$args` is defined in [call instructions][L] and indicates the length of the
@@ -1398,9 +1401,9 @@ https://github.com/WebAssembly/design/pull/710
 
 #### Unconditional Branch
 
-| Mnemonic    | Signature                                              | Families | Opcode |
-| ----------- | ------------------------------------------------------ | -------- | ------ |
-| `br`        | `<$arity: i32, $depth: i32> (T[$arity]) : (T[$arity])` | [B] [Q]  | 0x06   |
+| Mnemonic    | Immediates                 | Signature                   | Families | Opcode |
+| ----------- | -------------------------- | --------------------------- | -------- | ------ |
+| `br`        | `$arity: i32, $depth: i32` | `(T[$arity]) : (T[$arity])` | [B] [Q]  | 0x06   |
 
 The `br` instruction [branches](#branching) according to the control flow stack
 entry `$depth` from the top. It returns the values of its operands.
@@ -1417,9 +1420,9 @@ TODO: This anticipates a proposal to make `br`, `br_table`, `return`, and
 
 #### Conditional Branch
 
-| Mnemonic    | Signature                                                               | Families | Opcode |
-| ----------- | ----------------------------------------------------------------------- | -------- | ------ |
-| `br_if`     | `<$arity: i32, $depth: i32> (T[$arity], $condition: i32) : (T[$arity])` | [B]      | 0x07   |
+| Mnemonic    | Immediates                 | Signature                                    | Families | Opcode |
+| ----------- | -------------------------- | -------------------------------------------- | -------- | ------ |
+| `br_if`     | `$arity: i32, $depth: i32` | `(T[$arity], $condition: i32) : (T[$arity])` | [B]      | 0x07   |
 
 If `$condition` is [true], the `br_if` instruction [branches](#branching)
 according to the control flow stack entry `$depth` from the top. Otherwise, it
@@ -1440,9 +1443,9 @@ https://github.com/WebAssembly/design/pull/709
 
 #### Table Branch
 
-| Mnemonic    | Signature                                                                    | Families | Opcode |
-| ----------- | ---------------------------------------------------------------------------- | -------- | ------ |
-| `br_table`  | `<$arity: i32, TABLE, $default: i32> (T[$arity], $index: i32) : (T[$arity])` | [B] [Q]  | 0x08   |
+| Mnemonic    | Immediates                          | Signature                                | Families | Opcode |
+| ----------- | ----------------------------------- | ---------------------------------------- | -------- | ------ |
+| `br_table`  | `$arity: i32, TABLE, $default: i32` | `(T[$arity], $index: i32) : (T[$arity])` | [B] [Q]  | 0x08   |
 
 First, the `br_table` instruction selects a depth to use. If `$index` is within
 the bounds of the table, the depth is the value of the indexed table element.
@@ -1526,9 +1529,9 @@ values of its operands.
 
 #### Return
 
-| Mnemonic    | Signature                                 | Families | Opcode |
-| ----------- | ----------------------------------------- | -------- | ------ |
-| `return`    | `<$arity: i32> (T[$arity]) : (T[$arity])` | [B] [Q]  | 0x09   |
+| Mnemonic    | Immediates    | Signature                   | Families | Opcode |
+| ----------- | ------------- | --------------------------- | -------- | ------ |
+| `return`    | `$arity: i32` | `(T[$arity]) : (T[$arity])` | [B] [Q]  | 0x09   |
 
 The `return` instruction [branches](#branching) according to the control-flow
 stack bottom. It returns the values of its operands.
@@ -1590,14 +1593,14 @@ discard unneeded values from the value stack.
 
 #### Constant
 
-| Mnemonic    | Signature                   | Families | Opcode |
-| ----------- | --------------------------- | -------- | ------ |
-| `i32.const` | `<i32> () : (i32)`          |          | 0x10   |
-| `i64.const` | `<i64> () : (i64)`          |          | 0x11   |
-| `f32.const` | `<f32> () : (f32)`          |          | 0x12   |
-| `f64.const` | `<f64> () : (f64)`          |          | 0x13   |
+| Mnemonic    | Immediates    | Signature    | Families | Opcode |
+| ----------- | ------------- | ------------ | -------- | ------ |
+| `i32.const` | `$value: i32` | `() : (i32)` |          | 0x10   |
+| `i64.const` | `$value: i64` | `() : (i64)` |          | 0x11   |
+| `f32.const` | `$value: f32` | `() : (f32)` |          | 0x12   |
+| `f64.const` | `$value: f64` | `() : (f64)` |          | 0x13   |
 
-The `const` instruction returns the value of its immediate.
+The `const` instruction returns the value of `$value`.
 
 > Floating-point constants can be created with arbitrary bit-patterns.
 
@@ -1606,9 +1609,9 @@ https://github.com/WebAssembly/design/pull/696
 
 #### Get Local
 
-| Mnemonic    | Signature                   | Families | Opcode |
-| ----------- | --------------------------- | -------- | ------ |
-| `get_local` | `<$id: i32> () : (T[1])`    |          | 0x14   |
+| Mnemonic    | Immediates | Signature      | Families | Opcode |
+| ----------- | ---------- | -------------- | -------- | ------ |
+| `get_local` | `$id: i32` | `() : (T[1])`  |          | 0x14   |
 
 The `get_local` instruction returns the value of the local at index `$id` in the
 locals array. The type parameter is bound to the type of the local.
@@ -1618,9 +1621,9 @@ locals array. The type parameter is bound to the type of the local.
 
 #### Set Local
 
-| Mnemonic    | Signature                   | Families | Opcode |
-| ----------- | --------------------------- | -------- | ------ |
-| `set_local` | `<$id: i32> (T[1]) : ()`    |          | 0x15   |
+| Mnemonic    | Immediates | Signature      | Families | Opcode |
+| ----------- | ---------- | -------------- | -------- | ------ |
+| `set_local` | `$id: i32` | `(T[1]) : ()`  |          | 0x15   |
 
 The `set_local` instruction sets the value of the local at index `$id` in the
 locals array to the value given in the operand. The type parameter is bound to
@@ -1634,9 +1637,9 @@ the type of the local.
 
 #### Tee Local
 
-| Mnemonic    | Signature                    | Families | Opcode |
-| ----------- | ---------------------------- | -------- | ------ |
-| `tee_local` | `<$id: i32> (T[1]) : (T[1])` |          | 0x19   |
+| Mnemonic    | Immediates | Signature         | Families | Opcode |
+| ----------- | ---------- | ----------------- | -------- | ------ |
+| `tee_local` | `$id: i32` | `(T[1]) : (T[1])` |          | 0x19   |
 
 The `tee_local` instruction sets the value of the locals at index `$id` in the
 locals array to the value given in the operand. Its return value is the value of
@@ -1653,9 +1656,9 @@ return value.
 
 #### Get Global
 
-| Mnemonic     | Signature                  | Families | Opcode |
-| ------------ | -------------------------- | -------- | ------ |
-| `get_global` | `<$id: i32> () : (T[1])`   |          | TODO   |
+| Mnemonic     | Immediates | Signature     | Families | Opcode |
+| ------------ | ---------- | ------------- | -------- | ------ |
+| `get_global` | `$id: i32` | `() : (T[1])` |          | TODO   |
 
 The `get_global` instruction returns the value of the global identified by index
 `$id` in the [global index space]. The type parameter is bound to the type of
@@ -1666,9 +1669,9 @@ the global.
 
 #### Set Global
 
-| Mnemonic     | Signature                  | Families | Opcode |
-| ------------ | -------------------------- | -------- | ------ |
-| `set_global` | `<$id: i32> (T[1]) : ()`   |          | TODO   |
+| Mnemonic     | Immediates | Signature     | Families | Opcode |
+| ------------ | ---------- | ------------- | -------- | ------ |
+| `set_global` | `$id: i32` | `(T[1]) : ()` |          | TODO   |
 
 The `set_global` instruction sets the value of the global identified by index
 `$id` in the [global index space] to the value given in the operand. The type
@@ -1695,9 +1698,9 @@ https://github.com/WebAssembly/design/pull/695
 
 #### Call
 
-| Mnemonic    | Signature                                                | Families | Opcode |
-| ----------- | -------------------------------------------------------- | -------- | ------ |
-| `call`      | `<$arity: i32, $callee: i32> (T[$args]) : (T[$returns])` | [L]      | 0x17   |
+| Mnemonic    | Immediates                  | Signature                    | Families | Opcode |
+| ----------- | --------------------------- | ---------------------------- | -------- | ------ |
+| `call`      | `$arity: i32, $callee: i32` | `(T[$args]) : (T[$returns])` | [L]      | 0x17   |
 
 The `call` instruction performs a [call](#calling) to the function with index
 `$callee` in the [function index space].
@@ -1712,9 +1715,9 @@ https://github.com/WebAssembly/design/pull/695
 
 #### Indirect Call
 
-| Mnemonic        | Signature                                                                 | Families | Opcode |
-| --------------- | ------------------------------------------------------------------------- | -------- | ------ |
-| `call_indirect` | `<$arity: i32, $signature: i32> ($callee: i32, T[$args]) : (T[$returns])` | [L]      | 0x18   |
+| Mnemonic        | Immediates                     | Signature                                  | Families | Opcode |
+| --------------- | ------------------------------ | ------------------------------------------ | -------- | ------ |
+| `call_indirect` | `$arity: i32, $signature: i32` | `($callee: i32, T[$args]) : (T[$returns])` | [L]      | 0x18   |
 
 The `call_indirect` instruction performs a [call](#calling) to the function in
 the default table with index `$callee`.
@@ -2624,12 +2627,12 @@ instruction is always exact.
 
 #### Load
 
-| Mnemonic    | Signature                                             | Families | Opcode |
-| ----------- | ----------------------------------------------------- | -------- | ------ |
-| `i32.load`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i32)` | [M], [G] | 0x2a   |
-| `i64.load`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [G] | 0x2b   |
-| `f32.load`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (f32)` | [M], [Z] | 0x2c   |
-| `f64.load`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (f64)` | [M], [Z] | 0x2d   |
+| Mnemonic    | Immediates                    | Signature               | Families | Opcode |
+| ----------- | ----------------------------- | ----------------------- | -------- | ------ |
+| `i32.load`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i32)` | [M], [G] | 0x2a   |
+| `i64.load`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [G] | 0x2b   |
+| `f32.load`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (f32)` | [M], [Z] | 0x2c   |
+| `f64.load`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (f64)` | [M], [Z] | 0x2d   |
 
 The `load` instruction performs a [load](#loading) of the same size as its type.
 
@@ -2641,12 +2644,12 @@ IEEE 754-2008 `copy` operation.
 
 #### Store
 
-| Mnemonic    | Signature                                                       | Families | Opcode |
-| ----------- | --------------------------------------------------------------- | -------- | ------ |
-| `i32.store` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i32) : ()` | [M], [G] | 0x33   |
-| `i64.store` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i64) : ()` | [M], [G] | 0x34   |
-| `f32.store` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: f32) : ()` | [M], [F] | 0x35   |
-| `f64.store` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: f64) : ()` | [M], [F] | 0x36   |
+| Mnemonic    | Immediates                    | Signature                         | Families | Opcode |
+| ----------- | ----------------------------- | --------------------------------- | -------- | ------ |
+| `i32.store` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i32) : ()` | [M], [G] | 0x33   |
+| `i64.store` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i64) : ()` | [M], [G] | 0x34   |
+| `f32.store` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: f32) : ()` | [M], [F] | 0x35   |
+| `f64.store` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: f64) : ()` | [M], [F] | 0x36   |
 
 The `store` instruction performs a [store](#storing) of `$value` of the same
 size as its type.
@@ -2659,14 +2662,14 @@ IEEE 754-2008 `copy` operation.
 
 #### Extending Load, Signed
 
-| Mnemonic       | Signature                                             | Families | Opcode |
-| -------------- | ----------------------------------------------------- | -------- | ------ |
-| `i32.load8_s`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i32)` | [M], [S] | 0x20   |
-| `i32.load16_s` | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i32)` | [M], [S] | 0x22   |
-|                |                                                       |          |
-| `i64.load8_s`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [S] | 0x24   |
-| `i64.load16_s` | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [S] | 0x26   |
-| `i64.load32_s` | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [S] | 0x28   |
+| Mnemonic       | Immediates                    | Signature               | Families | Opcode |
+| -------------- | ----------------------------- | ----------------------- | -------- | ------ |
+| `i32.load8_s`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i32)` | [M], [S] | 0x20   |
+| `i32.load16_s` | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i32)` | [M], [S] | 0x22   |
+|                |                               |                         |          |        |
+| `i64.load8_s`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [S] | 0x24   |
+| `i64.load16_s` | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [S] | 0x26   |
+| `i64.load32_s` | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [S] | 0x28   |
 
 The signed extending load instructions perform a [load](#loading) of narrower
 width than their type, and return the value [sign-extended] to their type.
@@ -2679,14 +2682,14 @@ width than their type, and return the value [sign-extended] to their type.
 
 #### Extending Load, Unsigned
 
-| Mnemonic       | Signature                                             | Families | Opcode |
-| -------------- | ----------------------------------------------------- | -------- | ------ |
-| `i32.load8_u`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i32)` | [M], [U] | 0x21   |
-| `i32.load16_u` | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i32)` | [M], [U] | 0x23   |
-|                |                                                       |          |        |
-| `i64.load8_u`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [U] | 0x25   |
-| `i64.load16_u` | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [U] | 0x27   |
-| `i64.load32_u` | `<$offset: iPTR, $align: iPTR> ($base: iPTR) : (i64)` | [M], [U] | 0x29   |
+| Mnemonic       | Immediates                    | Signature               | Families | Opcode |
+| -------------- | ----------------------------- | ----------------------- | -------- | ------ |
+| `i32.load8_u`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i32)` | [M], [U] | 0x21   |
+| `i32.load16_u` | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i32)` | [M], [U] | 0x23   |
+|                |                               |                         |          |        |
+| `i64.load8_u`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [U] | 0x25   |
+| `i64.load16_u` | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [U] | 0x27   |
+| `i64.load32_u` | `$offset: iPTR, $align: iPTR` | `($base: iPTR) : (i64)` | [M], [U] | 0x29   |
 
 The unsigned extending load instructions perform a [load](#loading) of narrower
 width than their type, and return the value zero-extended to their type.
@@ -2699,14 +2702,14 @@ width than their type, and return the value zero-extended to their type.
 
 #### Wrapping Store
 
-| Mnemonic      | Signature                                                       | Families | Opcode |
-| ------------- | --------------------------------------------------------------- | -------- | ------ |
-| `i32.store8`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i32) : ()` | [M], [G] | 0x2e   |
-| `i32.store16` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i32) : ()` | [M], [G] | 0x2f   |
-|               |                                                                 |          |        |
-| `i64.store8`  | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i64) : ()` | [M], [G] | 0x30   |
-| `i64.store16` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i64) : ()` | [M], [G] | 0x31   |
-| `i64.store32` | `<$offset: iPTR, $align: iPTR> ($base: iPTR, $value: i64) : ()` | [M], [G] | 0x32   |
+| Mnemonic      | Immediates                    | Signature                         | Families | Opcode |
+| ------------- | ----------------------------- | --------------------------------- | -------- | ------ |
+| `i32.store8`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i32) : ()` | [M], [G] | 0x2e   |
+| `i32.store16` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i32) : ()` | [M], [G] | 0x2f   |
+|               |                               |                                   |          |        |
+| `i64.store8`  | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i64) : ()` | [M], [G] | 0x30   |
+| `i64.store16` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i64) : ()` | [M], [G] | 0x31   |
+| `i64.store32` | `$offset: iPTR, $align: iPTR` | `($base: iPTR, $value: i64) : ()` | [M], [G] | 0x32   |
 
 The wrapping store instructions performs a [store](#storing) of `$value`
 silently wrapped to a narrower width.
