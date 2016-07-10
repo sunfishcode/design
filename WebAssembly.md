@@ -270,7 +270,7 @@ There are several *known sections*:
 0. [Element Section]
 0. [Name Section]
 
-TODO: What shall the names and positions of the Global and Element sections be?
+TODO: What should the names and positions of the Global and Element sections be?
 
 TODO: Reorder the known sections strategically?
 
@@ -1017,7 +1017,7 @@ provided by the module itself as input to an instruction.
 Instruction signatures describe the explicit inputs and outputs to an
 instruction. They are described in the following form:
 
- - `(` *operands* `)` `:` `(` *returns* `)`
+   `(` *operands* `)` `:` `(` *returns* `)`
 
 *Operands* is a list of [typed] value names representing values provided by
 program execution as input to an instruction. *returns* is a list of [types],
