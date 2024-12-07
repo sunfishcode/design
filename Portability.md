@@ -61,4 +61,4 @@ the standard interface to the host environment's available imports either at
 compile-time (via `#ifdef`) or run-time (via [feature detection](FeatureTest.md)
 and dynamic [loading](Modules.md)/[linking](DynamicLinking.md)).
 
-[future 64-bit]: FutureFeatures.md#linear-memory-bigger-than-4-gib
+[future 64-bit]: https://github.com/WebAssembly/memory64
